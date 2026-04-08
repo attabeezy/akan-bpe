@@ -3,14 +3,14 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "waxal-refined"
+name = "somax"
 version = "0.1.0"
 description = "Dual-stream tokenizer for African languages - eliminates the Tokenization Tax"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
-    {name = "WAXAL-Dual-Core Team"}
+    {name = "SOMAX Team"}
 ]
 keywords = ["nlp", "tokenization", "african-languages", "llm", "edge-ai"]
 classifiers = [
@@ -50,7 +50,7 @@ train = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["waxal_refined*"]
+include = ["somax*"]
 
 [tool.black]
 line-length = 100

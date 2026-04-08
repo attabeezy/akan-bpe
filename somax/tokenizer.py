@@ -12,7 +12,7 @@ from typing import Literal
 
 from transformers import PreTrainedTokenizerFast
 
-from waxal_refined.router import WAXALRouter
+from somax.router import WAXALRouter
 
 
 StreamType = Literal["robust", "logic"]

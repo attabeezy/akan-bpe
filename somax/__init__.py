@@ -8,8 +8,8 @@ Key components:
 - DualCoreTokenizer: Manages ASR and TTS tokenization streams
 """
 
-from waxal_refined.router import WAXALRouter
-from waxal_refined.tokenizer import DualCoreTokenizer
+from somax.router import WAXALRouter
+from somax.tokenizer import DualCoreTokenizer
 
 __all__ = ["WAXALRouter", "DualCoreTokenizer"]
 __version__ = "0.1.0"

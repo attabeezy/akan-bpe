@@ -1,4 +1,4 @@
-# WAXAL-Dual-Core Training Variant Configurations
+# SOMAX Training Variant Configurations
 #
 # Each variant defines one or more training stages executed sequentially.
 # The same model is carried forward between stages (no re-initialisation).

@@ -1,10 +1,10 @@
-# Project WAXAL-Dual-Core
-**Subtitle:** Eliminating the Tokenization Tax for African Languages via Dual-Stream Tokenization
+# Project somax
+**Subtitle:** Eliminating the Tokenization Tax for African Languages via Dual-Stream Processing
 
 ## 1. Vision
-WAXAL-Dual-Core is a research-to-production framework designed to eliminate the **“Tokenization Tax”**—the structural inefficiency where African languages require significantly more tokens than English, leading to higher latency, increased cost, and degraded reasoning. 
+SOMAX is a research-to-production framework designed to eliminate the **“Tokenization Tax”**—the structural inefficiency where African languages require significantly more tokens than English, leading to higher latency, increased cost, and degraded reasoning. 
 
-By leveraging the **Google WAXAL dataset (Feb 2026)**, this project introduces a dual-stream tokenization architecture that treats spontaneous speech and formal text as fundamentally different linguistic regimes.
+By leveraging the **Google WAXAL dataset (Feb 2026)**, SOMAX introduces a dual-stream processing architecture that treats spontaneous speech and formal text as fundamentally different linguistic regimes, sharing a unified vocabulary for maximum embedding efficiency.
 
 ## 2. Problem Statement: The Tokenization Tax
 Modern LLM tokenizers are optimized for English-heavy corpora. For African languages like Akan, Yoruba, and Swahili:
@@ -19,7 +19,7 @@ The WAXAL dataset contains two fundamentally different distributions:
 2.  **WAXAL-TTS (Formal):** Clean, structured, grammatically correct, and semantically dense scripts.
 
 ## 4. Methodology: Experimental Groups
-We will evaluate six training regimes to identify the optimal balance of robustness and efficiency:
+We evaluate six training regimes to identify the optimal balance of robustness and efficiency:
 
 | Group | Training Sequence | Rationale |
 | :--- | :--- | :--- |
@@ -31,12 +31,12 @@ We will evaluate six training regimes to identify the optimal balance of robustn
 | **Variant E** | ASR → TTS | Test if phonetic grounding aids later reasoning. |
 
 ## 5. Engineering & Hardware Strategy
-* **Training:** Google Colab (T4 GPU) for LoRA embedding alignment.
+* **Training:** Google Colab (T4 GPU) for staged LoRA embedding alignment.
 * **Deployment:** Dell Latitude 7400 (8GB RAM) using 4-bit GGUF quantization.
-* **Product:** `WAXAL-Refined`—An open-source Python library featuring a **Dynamic Token Switcher** that routes input to the appropriate core.
+* **Product:** `somax`—An open-source Python library featuring a **Dynamic Stream Router** and a **Dual-Core Tokenizer** sharing a unified BPE vocabulary.
 
 ## 6. Roadmap
-* **Phase I (Audit):** Measure baseline Token Tax across WAXAL subsets.
-* **Phase II (Train):** Staged LoRA training for Variant D and others.
-* **Phase III (Patch):** Align tokens and export to GGUF format.
-* **Phase IV (Release):** GitHub launch and hardware benchmarking in Ghana.
+* **Phase I (Audit):** Measure baseline Token Tax across WAXAL subsets using `benchmark_fertility.py`.
+* **Phase II (Train):** Staged LoRA training for Variant D and others via `train_lora.py`.
+* **Phase III (Patch):** Export to GGUF format for edge deployment using `export_gguf.py`.
+* **Phase IV (Release):** Hardware benchmarking on the Dell Latitude 7400 and GitHub launch.

@@ -16,15 +16,18 @@ export_gguf:
 	python scripts/export_gguf.py
 
 benchmark:
-	python benchmark.py
+	@echo "Usage examples:"
+	@echo "  python benchmark_fertility.py --tokenizer meta-llama/Llama-3.2-1B --test-file data/akan/twi_tts_test.jsonl"
+	@echo "  python benchmark_inference.py --model models/gguf/variant_D_Q4.gguf --test-file data/akan/twi_tts_test.jsonl"
+	python benchmark_fertility.py -h
 
 lint:
 	ruff check .
 	black --check .
-	mypy waxal_refined/
+	mypy somax/
 
 test:
-	pytest tests/
+	@if [ -d "tests" ]; then pytest tests/; else echo "No tests/ directory found."; fi
 
 clean:
 	rm -rf __pycache__ .pytest_cache .mypy_cache .ruff_cache

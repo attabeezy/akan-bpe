@@ -1,4 +1,4 @@
-# SOMAX
+# somax
 
 **Eliminating the Tokenization Tax for African Languages via Dual-Stream Tokenization**
 
@@ -10,23 +10,24 @@
 Modern LLM tokenizers are optimized for English, resulting in a **"Tokenization Tax"** for African languages like Akan, Yoruba, and Swahili. This project implements a research-to-production framework that:
 
 - Reduces token fertility (F = tokens/words) by ≥30%
-- Uses dual-stream tokenization for spontaneous speech (ASR) and formal text (TTS)
+- Uses dual-stream processing for spontaneous speech (ASR) and formal text (TTS)
 - Deploys efficiently on edge devices (8GB RAM)
 
 ## Key Components
 
-### 1. **WAXALRouter** (`waxal_refined/router.py`)
-Lightweight heuristic classifier that routes input to the appropriate tokenization stream:
+### 1. **WAXALRouter** (`somax/router.py`)
+Lightweight heuristic classifier that routes input to the appropriate stream:
 - **Robust stream** (ASR-optimized): Handles conversational text, fillers, code-switching
 - **Logic stream** (TTS-optimized): Handles formal, semantic-rich text
 
-### 2. **DualCoreTokenizer** (`waxal_refined/tokenizer.py`)
-Manages two tokenizer models with dynamic routing based on input characteristics.
+### 2. **DualCoreTokenizer** (`somax/tokenizer.py`)
+Manages stream-aware tokenization using a **Unified Vocabulary**. Both streams share a single BPE vocabulary to ensure embedding alignment, while the router identifies the linguistic regime for downstream model selection.
 
 ### 3. **Training Pipeline** (`scripts/`)
 - `download.py` - Download WAXAL dataset from HuggingFace
-- `train_bpe.py` - Train separate BPE vocabularies for ASR/TTS
-- `train_lora.py` - Train LoRA variants (A, B, C, E, G)
+- `train_bpe.py` - Train unified BPE vocabulary for ASR/TTS
+- `train_router.py` - Train the TF-IDF router classifier
+- `train_lora.py` - Train LoRA variants (A, B, C, D, E)
 - `export_gguf.py` - Export to GGUF for edge deployment
 
 ## Quick Start
@@ -47,7 +48,7 @@ pip install -e ".[dev,train]"
 
 ### Option 1: Run End-to-End in Google Colab
 
-1. Open `notebooks/waxal_training_pipeline.ipynb` in VS Code
+1. Open `notebooks/pipeline.ipynb` in VS Code
 2. Install the Colab extension
 3. Set your HuggingFace token: `os.environ['HF_TOKEN'] = 'your_token'`
 4. Run all cells
@@ -58,18 +59,21 @@ pip install -e ".[dev,train]"
 # 1. Download WAXAL dataset (Akan)
 python scripts/download.py --lang akan --output data/
 
-# 2. Train BPE vocabularies
+# 2. Train unified BPE vocabulary
 python scripts/train_bpe.py --input data/akan/ --output models/tokenizers/
 
 # 3. Train LoRA variant (D recommended)
-python scripts/train_lora.py --group D --data data/akan/
+python scripts/train_lora.py --group D --data data/akan/ --output checkpoints/
 
-# 4. Benchmark results
-python benchmark.py --tokenizer meta-llama/Llama-3.2-1B \
-    --test-file data/akan/twi_tts_test.jsonl --baseline
+# 4. Benchmark fertility results
+python benchmark_fertility.py --tokenizer meta-llama/Llama-3.2-1B \
+    --waxal-tokenizer models/tokenizers/akan/unified_tokenizer.json --test-file data/akan/twi_tts_test.jsonl --compare
 
 # 5. Export to GGUF (requires llama.cpp)
-python scripts/export_gguf.py --checkpoint checkpoints/variant_D/final/
+python scripts/export_gguf.py --checkpoint checkpoints/variant_D/final/ --output models/gguf/
+
+# 6. Benchmark edge inference
+python benchmark_inference.py --model models/gguf/variant_D_Q4.gguf --test-file data/akan/twi_tts_test.jsonl
 ```
 
 ## Dataset
@@ -127,21 +131,23 @@ F = Total Tokens / Total Words
 ## Project Structure
 
 ```
-WAXAL-Dual-Core/
+SOMAX/
 ├── data/                  # WAXAL subsets (gitignored)
 ├── models/                # Trained models (gitignored)
 ├── scripts/               # Training pipeline
 │   ├── download.py
 │   ├── train_bpe.py
+│   ├── train_router.py
 │   ├── train_lora.py
 │   └── export_gguf.py
-├── waxal_refined/         # Edge Python library
+├── somax/         # Edge Python library
 │   ├── __init__.py
 │   ├── router.py          # Stream classifier
-│   └── tokenizer.py       # Dual-core tokenizer
+│   └── tokenizer.py       # Dual-core tokenizer (Unified)
 ├── notebooks/             # Colab notebooks
 │   └── pipeline.ipynb
-├── benchmark.py            # Performance benchmarking
+├── benchmark_fertility.py  # Fertility metrics
+├── benchmark_inference.py  # Edge performance metrics
 ├── requirements.txt
 ├── pyproject.toml
 ├── Makefile
@@ -151,18 +157,17 @@ WAXAL-Dual-Core/
 ## Usage Example
 
 ```python
-from waxal_refined import DualCoreTokenizer
+from somax import DualCoreTokenizer
 
-# Initialize with custom tokenizers
+# Initialize with unified tokenizer
 tokenizer = DualCoreTokenizer(
-    asr_path="models/tokenizers/akan/asr_tokenizer.json",
-    tts_path="models/tokenizers/akan/tts_tokenizer.json",
+    tokenizer_path="models/tokenizers/akan/unified_tokenizer.json",
     language="akan"
 )
 
 # Automatic routing based on input
-conversational = "uhm chale me dwo o"  # Routed to ASR tokenizer
-formal = "The president delivered a formal address"  # Routed to TTS tokenizer
+conversational = "uhm chale me dwo o"  # Routed to ASR stream
+formal = "The president delivered a formal address"  # Routed to TTS stream
 
 # Check routing
 print(tokenizer.classify(conversational))  # "robust"
@@ -178,10 +183,10 @@ After training, compare with baseline:
 
 ```bash
 # Baseline
-python benchmark.py --tokenizer meta-llama/Llama-3.2-1B --test-file data/akan/test.jsonl --baseline
+python benchmark_fertility.py --tokenizer meta-llama/Llama-3.2-1B --test-file data/akan/twi_tts_test.jsonl
 
 # Trained
-python benchmark.py --model checkpoints/variant_D/final/ --test-file data/akan/test.jsonl --huggingface
+python benchmark_fertility.py --tokenizer models/tokenizers/akan/unified_tokenizer.json --waxal --test-file data/akan/twi_tts_test.jsonl
 ```
 
 Expected improvement:

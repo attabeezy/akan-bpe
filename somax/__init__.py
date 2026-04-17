@@ -1,15 +1,25 @@
-"""WAXAL-Refined: Dual-stream tokenizer for African languages.
+"""SOMAX tokenizer-only toolkit for Twi experiments."""
 
-Eliminates the Tokenization Tax by routing input through optimized
-tokenizers based on linguistic characteristics.
+from somax.experiment import ExperimentTokenizer, run_fertility_experiment
+from somax.metrics import FertilityResult, compute_fertility
+from somax.tokenizers import (
+    DEFAULT_SPECIAL_TOKENS,
+    build_tokenizer_stats,
+    load_tokenizer,
+    save_tokenizer_stats,
+    train_bpe_tokenizer,
+)
 
-Key components:
-- WAXALRouter: Heuristic classifier for stream selection
-- DualCoreTokenizer: Manages ASR and TTS tokenization streams
-"""
+__all__ = [
+    "DEFAULT_SPECIAL_TOKENS",
+    "ExperimentTokenizer",
+    "FertilityResult",
+    "build_tokenizer_stats",
+    "compute_fertility",
+    "load_tokenizer",
+    "run_fertility_experiment",
+    "save_tokenizer_stats",
+    "train_bpe_tokenizer",
+]
 
-from somax.router import WAXALRouter
-from somax.tokenizer import DualCoreTokenizer
-
-__all__ = ["WAXALRouter", "DualCoreTokenizer"]
 __version__ = "0.1.0"

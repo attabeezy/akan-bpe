@@ -2,6 +2,7 @@ data/
 *.pyc
 __pycache__/
 .pytest_cache/
+.pytest_tmp/
 .mypy_cache/
 .ruff_cache/
 .venv/
@@ -13,6 +14,7 @@ build/
 *.bin
 *.gguf
 models/
+results/
 checkpoints/
 logs/
 .env

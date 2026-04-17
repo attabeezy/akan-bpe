@@ -1,283 +1,403 @@
 # SOMAX — Project Reference
-**Eliminating the Tokenization Tax for African Languages via Dual-Stream Processing**
-**Status:** Implementation Phase (April 2026) | **Hardware:** Cloud (Colab T4) → Edge (Dell Latitude 7400)
+**Eliminating the Tokenization Tax for Twi via Dual-Stream Tokenizer Experiments**
+
+**Status:** Phase 1, tokenizer-only  
+**Scope:** Twi only  
+**Current hardware target:** CPU or Colab for tokenizer training and fertility benchmarking  
+**Future hardware target:** Dell Latitude 7400 for downstream deployment experiments
 
 ---
 
 ## 1. Vision
 
-SOMAX is a research-to-production framework designed to eliminate the **"Tokenization Tax"** — the structural inefficiency where African languages require significantly more tokens than English, leading to higher latency, increased cost, and degraded reasoning.
+SOMAX is a Twi-focused research project investigating the "Tokenization Tax":
+the tendency for African languages to require far more tokens than English under
+standard LLM tokenizers, increasing latency, cost, and fragmentation.
 
-By leveraging **Google WAXAL** (spontaneous Twi/Akan ASR, ~100k) and the **Ghana NLP Pristine-Twi dataset** (~999k clean formal Twi text), SOMAX introduces a dual-stream processing architecture that treats spontaneous speech and formal text as fundamentally different linguistic regimes, sharing a unified vocabulary for maximum embedding efficiency.
+The current project is intentionally narrow.
 
----
+SOMAX is not yet a model-training or deployment project. The current phase only asks:
 
-## 2. Problem Statement
-
-Modern LLM tokenizers are optimized for English-heavy corpora. For African languages like Twi (Akan):
-
-- An English sentence (~10 tokens) can become 40+ tokens in the target language.
-- **Consequences:** Higher latency (edge devices), higher costs, weaker reasoning (semantic fragmentation).
-- **Metric:** Token Fertility — $F = \text{Tokens} / \text{Words}$
-- **Goal:** Reduce $F$ by $\ge 30\%$ through dual-stream vocabulary redesign.
+- can specialized Twi tokenizers outperform a baseline tokenizer?
+- does ASR-style Twi benefit from a different vocabulary than formal Twi?
+- is one mixed tokenizer enough, or do two specialized tokenizers appear justified?
 
 ---
 
-## 3. Core Insight: Linguistic Duality
+## 2. Current Scope
 
-Two Twi data sources capture fundamentally different linguistic distributions:
+The active scope is tokenizer work only.
 
-1. **WAXAL `aka_asr` (Spontaneous):** Noisy, code-switching (e.g., Twi + English), fillers ("uhm", "chale"), and disfluencies. ~100k transcriptions.
-2. **Ghana NLP Pristine-Twi (Formal):** Clean, structured, grammatically correct Twi text. ~999k samples — eliminates the TTS data imbalance that plagued the original WAXAL-only approach.
+Included in scope:
+
+- Twi data collection and normalization
+- BPE tokenizer training
+- tokenizer comparison across ASR and formal text
+- token fertility benchmarking
+
+Explicitly out of scope for now:
+
+- model fine-tuning
+- LoRA training
+- embedding resizing
+- GGUF export
+- edge inference benchmarking
+- production routing and mux deployment
+
+These remain future directions, not current deliverables.
 
 ---
 
-## 4. Experimental Groups
+## 3. Core Idea
 
-| Group | Training Sequence | Rationale |
-|:---|:---|:---|
-| **Control** | Standard Llama-3.2-1B | Baseline "Taxed" performance |
-| **Variant A** | ASR Only | Pure robustness to conversational noise |
-| **Variant B** | TTS Only | Maximum semantic density and logic |
-| **Variant C** | ASR + TTS (Mixed) | Standard joint-distribution training |
-| **Variant D** | **TTS → ASR → TTS** | **Primary hypothesis:** Anchor logic, adapt to noise, refine logic |
-| **Variant E** | ASR → TTS | Test if phonetic grounding aids later reasoning |
+Twi appears to contain at least two useful text regimes:
+
+1. **ASR / spontaneous Twi**
+   This is noisy, conversational, and often includes fillers, short forms, and code-switching.
+
+2. **Formal / TTS-like Twi**
+   This is cleaner, more structured, and more semantically dense.
+
+The main hypothesis is simple:
+
+- a tokenizer trained on ASR-style Twi may tokenize ASR-like input more efficiently
+- a tokenizer trained on formal Twi may tokenize formal input more efficiently
+
+Before building routers or model paths, SOMAX first needs to verify that this specialization is real.
 
 ---
 
-## 5. Directory Structure
+## 4. Research Question
 
-```
+The current phase asks:
+
+**Do specialized Twi tokenizers show measurable advantages over a standard baseline tokenizer, and over each other, on different Twi text regimes?**
+
+More concretely:
+
+- does an ASR-trained tokenizer reduce fertility on ASR test text?
+- does a TTS-trained tokenizer reduce fertility on formal test text?
+- does a mixed tokenizer perform well enough that two specialized tokenizers are unnecessary?
+
+---
+
+## 5. Data Sources
+
+SOMAX uses two Twi datasets:
+
+### 5.1 WAXAL `aka_asr`
+
+- Source: `google/WaxalNLP`
+- Type: spontaneous Twi/Akan ASR transcriptions
+- Characteristics:
+  - conversational
+  - noisy
+  - filler-heavy
+  - code-switching tolerant
+
+### 5.2 Pristine-Twi
+
+- Source: Ghana NLP `pristine-twi`
+- Type: clean formal Twi text
+- Characteristics:
+  - structured
+  - grammatically cleaner
+  - more formal and semantically dense
+
+These two corpora define the dual-stream tokenizer experiment.
+
+---
+
+## 6. Phase 1 Experimental Design
+
+This phase compares tokenizers only.
+
+### 6.1 Tokenizer Variants
+
+The recommended tokenizer variants are:
+
+| Variant | Description | Purpose |
+|---|---|---|
+| **Control** | Existing baseline tokenizer from a pretrained model | Reference point |
+| **Variant A** | Tokenizer trained only on ASR text | Specialized conversational tokenizer |
+| **Variant B** | Tokenizer trained only on formal/TTS text | Specialized formal tokenizer |
+| **Variant C** | Tokenizer trained on mixed ASR + TTS text | Single-tokenizer compromise |
+
+For now, these are tokenizer variants, not model variants.
+
+### 6.2 Deferred Variants
+
+The original project also considered staged variants such as:
+
+- `TTS -> ASR -> TTS`
+- `ASR -> TTS`
+
+Those ideas are not the first priority in tokenizer-only phase 1.
+They may be revisited later if the basic A/B/C results show clear separation.
+
+---
+
+## 7. Experimental Goal
+
+The immediate goal is to produce one clean comparison table across two test sets.
+
+Target benchmark table:
+
+| Tokenizer | ASR Test Fertility | TTS Test Fertility | Interpretation |
+|---|---:|---:|---|
+| Control | baseline | baseline | Standard reference |
+| Variant A | ? | ? | Expected strength on ASR-style Twi |
+| Variant B | ? | ? | Expected strength on formal Twi |
+| Variant C | ? | ? | Mixed compromise candidate |
+
+This table is the primary deliverable for phase 1.
+
+---
+
+## 8. Metric
+
+### Primary metric: Token Fertility
+
+Token fertility is defined as:
+
+`F = total_tokens / total_words`
+
+This is the main evaluation metric for the current phase.
+
+Interpretation:
+
+- lower is better, if text quality and meaning preservation are not being altered
+- a tokenizer is more efficient when it needs fewer tokens per word on the same text
+
+### Phase 1 success criteria
+
+Success in phase 1 does not require a complete product.
+It requires a clear empirical result, such as:
+
+- Variant A performs best on ASR test text
+- Variant B performs best on TTS test text
+- Variant C performs competitively on both
+- or one tokenizer dominates both regimes and weakens the dual-tokenizer hypothesis
+
+Any of those are valid findings.
+
+---
+
+## 9. Recommended Workflow
+
+The current recommended workflow is:
+
+### Step 1: Download and normalize Twi data
+
+Use `download.py` to create standardized JSONL files under `data/`.
+
+Recommended filenames:
+
+- `aka_asr_train.jsonl`
+- `aka_asr_validation.jsonl`
+- `aka_asr_test.jsonl`
+- `pristine_twi_train.jsonl`
+- `pristine_twi_validation.jsonl`
+- `pristine_twi_test.jsonl`
+
+### Step 2: Train tokenizer variants
+
+Train:
+
+- ASR tokenizer from `aka_asr_train.jsonl`
+- TTS tokenizer from `pristine_twi_train.jsonl`
+- mixed tokenizer from both training sets
+
+All tokenizer variants should use:
+
+- the same algorithm
+- the same vocab size
+- the same special tokens
+
+This keeps the comparison fair.
+
+### Step 3: Benchmark fertility
+
+Run one unified benchmark experiment that evaluates all selected tokenizers on:
+
+- ASR test text
+- TTS test text
+
+This should produce one comparison JSON, not many small result files.
+
+### Step 4: Interpret the results
+
+Possible outcomes:
+
+- specialization is real
+- one mixed tokenizer is enough
+- one tokenizer dominates everything
+
+Only after that should the project consider routing or model work.
+
+---
+
+## 10. Repository Structure
+
+The current project should be understood through this simplified structure:
+
+```text
 somax/
-├── data/                  # Twi datasets (WAXAL ASR + Ghana NLP pristine-twi) — gitignored
-├── models/                # Trained tokenizers, routers, GGUF files — gitignored
-├── checkpoints/           # LoRA training checkpoints — gitignored
-├── scripts/               # Research pipeline
-│   ├── download.py        # Dataset downloader (google/WaxalNLP via HuggingFace)
-│   ├── train_bpe.py       # Unified 8k BPE vocabulary generation
-│   ├── train_router.py    # TF-IDF + logistic regression router training
-│   ├── train_lora.py      # Staged LoRA training (all variants A–E)
-│   ├── export_gguf.py     # LoRA merge + llama.cpp GGUF quantization
-│   ├── benchmark_fertility.py  # Token fertility auditing (F = tokens/words)
-│   └── benchmark_inference.py  # Edge latency / TPS / memory auditing
-├── somax/                 # Edge Python library
-│   ├── __init__.py        # Exports WAXALRouter, DualCoreTokenizer
-│   ├── router.py          # Stream classifier (trained TF-IDF or regex fallback)
-│   └── tokenizer.py       # Dual-core stream manager (unified vocabulary)
-├── configs/
-│   └── variants.yaml      # LoRA variant definitions (Control, A–E)
+├── data/                        # normalized Twi datasets
+├── models/                      # trained tokenizer artifacts
+├── results/                     # benchmark outputs
+├── scripts/
+│   ├── download.py              # dataset download and normalization
+│   ├── train_bpe.py             # tokenizer training
+│   └── benchmark_fertility.py
+├── somax/                       # thin helpers for tokenizer-only experiments
 ├── tests/
-│   ├── test_router.py
-│   └── test_tokenizer.py
-├── notebooks/
-│   └── train_eval.ipynb  # End-to-end Colab pipeline
-├── Makefile               # Pipeline shortcuts
-└── project.md             # This file
+├── README.md
+└── project.md
 ```
 
 ---
 
-## 6. Language File Naming Convention
+## 11. Canonical File Contracts
 
-All scripts use a shared prefix mapping that mirrors `download.py`:
+### 11.1 Data files
 
-| Language | ASR prefix | Formal text prefix |
-|----------|------------|--------------------|
-| twi      | `aka_asr`  | `pristine_twi`     |
+Recommended JSONL schema:
 
-Files follow the pattern `{prefix}_{split}.jsonl` (e.g. `aka_asr_train.jsonl`, `pristine_twi_test.jsonl`).
+```json
+{"id": "sample_id", "text": "some twi text", "source": "aka_asr"}
+```
+
+If existing scripts use `transcription`, that is acceptable, but the repo should converge on one field contract over time.
+
+### 11.2 Tokenizer artifacts
+
+Recommended outputs:
+
+- `models/asr_tokenizer.json`
+- `models/tts_tokenizer.json`
+- `models/mixed_tokenizer.json`
+
+Optional metadata:
+
+- training stats
+- corpus sizes
+- vocab summaries
+
+### 11.3 Benchmark outputs
+
+SOMAX should use one simple rule:
+
+- one experiment run produces one JSON file
+
+Recommended result file:
+
+- `results/tokenizer_fertility_experiment_001.json`
+
+That file should contain:
+
+- experiment metadata
+- the tokenizers included in the run
+- the test sets used
+- fertility results for every tokenizer on every test set
+- a short summary of which tokenizer performed best where
+
+The project should avoid scattering one experiment across many small output files.
 
 ---
 
-## 7. Phase I — Vocabulary & LoRA (Cloud)
+## 12. Best Practices For Phase 1
 
-### 7.1 Dataset Download (`download.py`)
+To keep the project small and defensible:
 
-```bash
-python scripts/download.py --output data/
-```
+- vary one major factor at a time
+- keep vocab size constant across tokenizer variants
+- keep special tokens constant across tokenizer variants
+- use the same test files for every benchmark
+- save every benchmark result to JSON
+- treat one benchmark run as one complete experiment with one output JSON
+- avoid mixing tokenizer experiments with model experiments
+- document the exact corpus used for each tokenizer
 
-Downloads two sources:
-- **WAXAL `aka_asr`** from `google/WaxalNLP` — spontaneous Twi/Akan speech transcriptions
-- **Pristine-Twi** from `ghananlpcommunity/pristine-twi` — 999k clean formal Twi text, auto-split 90/5/5 into train/validation/test
-
-All saved as JSONL under `data/twi/`.
-
-### 7.2 BPE Tokenizer (`train_bpe.py`)
-
-Trains a single unified 8k BPE vocabulary on combined ASR+TTS data.
-
-Special tokens (in ID order):
-
-```
-[PAD]=0  [UNK]=1  [CLS]=2  [SEP]=3  [MASK]=4  <s>=5  </s>=6  <pad>=7
-```
-
-Outputs:
-- `models/tokenizers/{lang}/unified_tokenizer.json` — raw BPE (tokenizers library format)
-- `models/tokenizers/{lang}/tokenizer_config.json` — bos/eos/pad mappings for `PreTrainedTokenizerFast`
-- `models/tokenizers/{lang}/stream_token_stats.json` — per-token ASR/TTS dominance metadata
-
-```bash
-python scripts/train_bpe.py --input data/twi/ --output models/tokenizers/ --language twi
-```
-
-### 7.3 Router Training (`train_router.py`)
-
-Trains a TF-IDF + logistic regression classifier on WAXAL ASR/TTS splits. Character n-grams (2–4), max 20k features. 5-fold cross-validation reported. Saved as `models/router/{lang}_router.pkl`.
-
-```bash
-python scripts/train_router.py --data data/twi/ --output models/router/ --language twi
-```
-
-### 7.4 Staged LoRA Training (`train_lora.py`)
-
-When `--tokenizer-path` is provided, the WAXAL tokenizer replaces Llama's 128k tokenizer:
-
-1. Load Llama-3.2-1B and **snapshot** its full 128k embedding matrix (before resize)
-2. Resize model embeddings from 128k → 8k
-3. **Warm-initialize** each of the 8k rows by averaging the Llama subword embeddings for that token string; fall back to the embedding mean for empty encodings
-4. Wrap with LoRA using `modules_to_save=["embed_tokens", "lm_head"]` so the embedding and output projection layers stay fully trainable alongside LoRA adapters
-
-This ensures fertility gains measured in benchmarks reflect real inference behaviour.
-
-```bash
-# Recommended — uses WAXAL tokenizer
-python scripts/train_lora.py \
-    --group D \
-    --data data/twi/ \
-    --output checkpoints/ \
-    --tokenizer-path models/tokenizers/twi/unified_tokenizer.json
-
-# Control group — uses Llama tokenizer directly
-python scripts/train_lora.py --group control --data data/twi/ --output checkpoints/
-```
-
-Variant D staged training sequence:
-
-| Stage | Data | LR | Epochs |
-|-------|------|----|--------|
-| 1 | TTS (formal) | 2e-4 | 2 |
-| 2 | ASR (conversational) | 1e-4 | 1 |
-| 3 | TTS (formal) | 5e-5 | 1 |
+This phase should produce a clear result before the repo takes on more complexity.
 
 ---
 
-## 8. Phase II — Edge Library
+## 13. What This Phase Is Not Trying To Prove
 
-### 8.1 WAXALRouter (`somax/router.py`)
+Phase 1 is not trying to prove:
 
-Loads a trained `.pkl` classifier when available; falls back to a regex heuristic (6 conversational markers + length < 5 words) when no model file exists.
+- better Twi reasoning by a model
+- better generation quality
+- better LoRA adaptation
+- better edge deployment performance
 
-```python
-router = WAXALRouter(language="twi", model_dir="models/router/")
-router.classify("uhm chale me dwo")                          # → "robust"
-router.classify("The president delivered a formal address")  # → "logic"
-```
+Those are important, but they belong to later phases.
 
-### 8.2 DualCoreTokenizer (`somax/tokenizer.py`)
-
-Wraps the unified WAXAL `PreTrainedTokenizerFast` with the `WAXALRouter` for stream classification. Special tokens (`<s>`, `</s>`, `<pad>`) are set at load time.
-
-```python
-from somax import DualCoreTokenizer
-
-tokenizer = DualCoreTokenizer(
-    tokenizer_path="models/tokenizers/twi/unified_tokenizer.json",
-    language="twi",
-)
-
-tokenizer.classify("uhm chale me dwo o")           # → "robust"
-tokenizer.encode("The formal text goes here")      # → [token IDs]
-ids, stream = tokenizer.encode_with_stream("uhm")  # → ([...], "robust")
-```
+The only thing phase 1 must prove is whether specialized tokenizers for Twi are worth pursuing.
 
 ---
 
-## 9. Phase III — GGUF Export (`export_gguf.py`)
+## 14. Future Directions
 
-Merges LoRA adapters into the base model, then converts to GGUF using llama.cpp. Requires llama.cpp built from source in a sibling directory or on PATH.
+If phase 1 shows strong specialization effects, SOMAX can expand in carefully staged steps.
 
-```bash
-python scripts/export_gguf.py \
-    --checkpoint checkpoints/variant_D/final/ \
-    --output models/gguf/ \
-    --quantization Q4_K_M
-```
+### 14.1 Router / mux experiment
 
----
+If Variant A and Variant B each win on their own text regime, the next logical step is:
 
-## 10. Phase IV — Benchmarking
+- train a router to classify incoming Twi text as ASR-like or formal
+- route the input to the most appropriate tokenizer
 
-### Token Fertility
+This would test whether a dual-tokenizer system is better than always using one tokenizer.
 
-```bash
-python scripts/benchmark_fertility.py \
-    --tokenizer meta-llama/Llama-3.2-1B \
-    --waxal-tokenizer models/tokenizers/twi/unified_tokenizer.json \
-    --test-file data/twi/pristine_twi_test.jsonl \
-    --compare
-```
+### 14.2 Incremental tokenizer variants
 
-Target: ≥30% fertility reduction. Expected: baseline ~4.0 → WAXAL ~2.8 tokens/word.
+If basic A/B/C results are promising, the project can revisit staged corpus ideas such as:
 
-### Edge Inference (Dell Latitude 7400)
+- `TTS -> ASR -> TTS`
+- `ASR -> TTS`
 
-```bash
-python scripts/benchmark_inference.py \
-    --model models/gguf/model-Q4_K_M.gguf \
-    --test-file data/twi/pristine_twi_test.jsonl
-```
+These should only be attempted after the simpler comparisons are complete.
 
-Measures tokens/second, latency (mean ± std), and memory usage (MB).
+### 14.3 Model integration
 
----
+If specialized tokenizers clearly help, a later phase may explore:
 
-## 11. Dependency Manifest
+- resizing model vocabularies
+- initializing embeddings for new tokenizer vocabularies
+- comparing specialized model paths
 
-| Group | Packages |
-|-------|----------|
-| Core (always) | `transformers`, `tokenizers`, `psutil` |
-| Train (cloud) | `peft`, `bitsandbytes`, `datasets`, `accelerate`, `torch`, `sentencepiece` |
-| Edge (local inference) | `llama-cpp-python` |
-| Dev | `pytest`, `black`, `ruff`, `mypy` |
+This is a separate project phase and should not be merged into the current tokenizer-only work.
 
-```bash
-pip install -e ".[dev,train]"        # cloud training + dev
-pip install -e ".[edge]"             # edge inference (requires C++ compiler on Windows)
-```
+### 14.4 Edge deployment
+
+If tokenizer and routing experiments succeed, future work may include:
+
+- exporting model artifacts for local inference
+- benchmarking on the Dell Latitude 7400
+- measuring latency, tokens per second, and memory use
+
+### 14.5 Twi task evaluation
+
+A later evaluation phase may test whether tokenizer gains translate to useful model behavior on tasks such as:
+
+- Twi QA
+- instruction following
+- curated prompt-response evaluation
+
+This should only happen after the tokenizer question is clearly answered.
 
 ---
 
-## 12. Phase V — Twi QA Evaluation
+## 15. Recommended Near-Term Deliverable
 
-Fertility reduction is a compression metric. A Twi QA evaluation closes the gap to task performance, demonstrating that the improvements are linguistically real — not just a tokenization artifact.
+A successful near-term SOMAX deliverable is:
 
-**What it would demonstrate:**
-- The fertility reduction produces a model that actually understands and generates Twi better
-- Variant D's staged training (TTS→ASR→TTS) outperforms the control and simpler variants on a real task, not just on the compression metric
-- The warm embedding initialization worked — the model converged to something meaningful despite starting from a resized vocabulary
+1. normalized Twi ASR and TTS datasets
+2. three trained tokenizer variants: ASR, TTS, mixed
+3. baseline comparison against a standard pretrained tokenizer
+4. one unified experiment JSON containing the fertility comparison across ASR and TTS test sets
+5. one short conclusion about whether specialization appears real
 
-**Dataset options:**
-- **AfriQA benchmark** — covers several African languages including Akan/Twi
-- **Ghana NLP community datasets**
-- A hand-curated set of 100–200 Twi QA pairs is sufficient to show a clear trend across variants
-
-**Target comparison table:**
-
-| Model | Fertility (F) | Exact Match | F1 |
-|---|---|---|---|
-| Control (Llama base) | ~4.0 | baseline | baseline |
-| Variant D + WAXAL tokenizer | ~2.8 | +X% | +X% |
-
-**Honest caveat:** Given the T4 training budget and the fact that embeddings are effectively retrained from warm-initialized scratch for 8k tokens, Variant D may not beat the control on QA out of the box. If it doesn't, that is still a legitimate research finding — it quantifies how much additional training is needed for fertility gains to materialize as task gains, and establishes a clear direction for future work.
-
----
-
-## 13. Roadmap
-
-- ✅ Phase I — Baseline fertility audit
-- ✅ Phase II — Staged LoRA training with WAXAL tokenizer and warm embedding init
-- ✅ Phase III — GGUF export pipeline
-- ⬜ Phase IV — Hardware benchmarking on Dell Latitude 7400 + GitHub release
-- ⬜ Phase V — Twi QA evaluation (AfriQA or curated set, Exact Match + F1 across variants)
+That is enough for a strong phase-1 outcome.

@@ -1,0 +1,6 @@
+{
+  "asr_tokenizer_path": "models/asr_tokenizer.json",
+  "tts_tokenizer_path": "models/tts_tokenizer.json",
+  "mixed_tokenizer_path": "models/mixed_tokenizer.json",
+  "classifier_path": "models/router_classifier.pkl"
+}

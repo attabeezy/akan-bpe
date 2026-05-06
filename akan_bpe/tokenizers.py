@@ -5,13 +5,13 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from tokenizers import Tokenizer
 from tokenizers.models import BPE
 from tokenizers.pre_tokenizers import Whitespace
 from tokenizers.trainers import BpeTrainer
 from transformers import AutoTokenizer, PreTrainedTokenizerFast
-
 
 DEFAULT_SPECIAL_TOKENS = ["[PAD]", "[UNK]", "[CLS]", "[SEP]", "[MASK]", "<s>", "</s>", "<pad>"]
 
@@ -65,7 +65,7 @@ def train_bpe_tokenizer(
     )
 
 
-def load_tokenizer(reference: str):
+def load_tokenizer(reference: str) -> Any:
     """Load a tokenizer from a local JSON path or Hugging Face identifier."""
     path = Path(reference)
     if path.exists():

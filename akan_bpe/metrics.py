@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import statistics
 from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -40,7 +41,7 @@ def compute_fertility(
     test_set_name: str,
     source_file: str,
     texts: list[str],
-    tokenizer,
+    tokenizer: Any,
 ) -> FertilityResult:
     """Compute token fertility for one tokenizer over one dataset."""
     total_tokens = 0

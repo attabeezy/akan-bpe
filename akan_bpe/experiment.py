@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, cast
 
 from akan_bpe.datasets import load_jsonl_samples, samples_to_texts
 from akan_bpe.metrics import compute_fertility
@@ -19,7 +20,10 @@ class ExperimentTokenizer:
 
 
 def _winner_key(result_map: dict[str, dict[str, object]], test_set_name: str) -> str:
-    return min(result_map, key=lambda key: result_map[key][test_set_name]["fertility"])
+    return min(
+        result_map,
+        key=lambda key: cast(dict[str, Any], result_map[key][test_set_name])["fertility"],
+    )
 
 
 def run_fertility_experiment(

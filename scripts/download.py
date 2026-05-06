@@ -85,7 +85,11 @@ def _split_rows(rows: list[dict[str, str]]) -> dict[str, list[dict[str, str]]]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Download Akan datasets for Akan-BPE.")
-    parser.add_argument("--output-dir", default="data", help="Directory for normalized JSONL files.")
+    parser.add_argument(
+        "--output-dir",
+        default="data",
+        help="Directory for normalized JSONL files.",
+    )
     parser.add_argument("--asr-limit", type=int, default=None, help="Optional limit per ASR split.")
     parser.add_argument(
         "--tts-limit",

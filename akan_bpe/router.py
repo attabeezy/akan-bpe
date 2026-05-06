@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 from akan_bpe.classifier import MLClassifierRouter
 from akan_bpe.tokenizers import load_tokenizer
@@ -148,7 +149,7 @@ class AkanBPERouter:
 def load_router_config(path: str) -> dict[str, object]:
     """Load router configuration from JSON."""
     with open(path, encoding="utf-8") as f:
-        return json.load(f)
+        return cast(dict[str, object], json.load(f))
 
 
 def save_router_config(path: Path, config: dict[str, object]) -> None:

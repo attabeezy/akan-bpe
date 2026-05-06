@@ -33,7 +33,7 @@ benchmark:
 lint:
 	ruff check .
 	black --check .
-	mypy dual_core/
+	mypy akan_bpe/
 
 test:
 	pytest tests/ -v

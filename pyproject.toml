@@ -4,17 +4,17 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "akan-bpe"
-version = "0.1.0"
-description = "Tokenizer-only Akan experiments for studying the Tokenization Tax"
+version = "0.2.0"
+description = "Eliminating the Tokenization Tax for Akan through specialized BPE tokenizers and ML routing"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
     {name = "Akan-BPE Team"}
 ]
-keywords = ["nlp", "tokenization", "akan", "twi", "tokenizer", "bpe"]
+keywords = ["nlp", "tokenization", "akan", "twi", "tokenizer", "bpe", "low-resource"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
@@ -22,6 +22,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 
@@ -29,6 +30,8 @@ dependencies = [
     "datasets>=2.18.0",
     "transformers>=4.40.0",
     "tokenizers>=0.15.0",
+    "scikit-learn>=1.4.0",
+    "numpy>=1.26.0",
 ]
 
 [project.optional-dependencies]
@@ -46,14 +49,22 @@ include = ["akan_bpe*"]
 [tool.black]
 line-length = 100
 target-version = ["py310", "py311", "py312"]
+extend-exclude = "train_eval\\.ipynb"
 
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+extend-exclude = ["train_eval.ipynb"]
+
+[tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/*.py" = ["E402"]
 
 [tool.mypy]
 python_version = "3.10"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
+ignore_missing_imports = true

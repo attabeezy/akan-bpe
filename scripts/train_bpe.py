@@ -32,7 +32,12 @@ def main() -> None:
 
     texts = samples_to_texts(all_samples)
     output_path = Path(args.output)
-    info = train_bpe_tokenizer(texts=texts, output_path=output_path, vocab_size=args.vocab_size, name=args.name)
+    info = train_bpe_tokenizer(
+        texts=texts,
+        output_path=output_path,
+        vocab_size=args.vocab_size,
+        name=args.name,
+    )
     stats = build_tokenizer_stats(info, texts)
     stats_path = output_path.with_name(f"{output_path.stem}_stats.json")
     save_tokenizer_stats(stats_path, stats)

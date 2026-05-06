@@ -7,12 +7,10 @@ import pickle
 from pathlib import Path
 from typing import Any
 
-import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
-
 
 DOMAIN_ASR = "asr"
 DOMAIN_TTS = "tts"
@@ -41,9 +39,9 @@ def extract_features(text: str) -> dict[str, float]:
         "avg_word_len": sum(len(w) for w in words) / word_count if word_count else 0.0,
         "word_count": word_count,
         "char_count": char_count,
-        "punct_ratio": sum(1 for c in text if c in ".,;:!?-()[]{}") / char_count
-        if char_count
-        else 0.0,
+        "punct_ratio": (
+            sum(1 for c in text if c in ".,;:!?-()[]{}") / char_count if char_count else 0.0
+        ),
         "upper_ratio": sum(1 for c in text if c.isupper()) / char_count if char_count else 0.0,
         "digit_ratio": sum(1 for c in text if c.isdigit()) / char_count if char_count else 0.0,
         "quote_count": text.count('"') + text.count("'") + text.count("''"),
@@ -134,8 +132,8 @@ class MLClassifierRouter:
 
         train_accuracy = self.classifier.score(texts, labels)
         return {
-            "asr_samples": sum(1 for l in labels if l == 0),
-            "tts_samples": sum(1 for l in labels if l == 1),
+            "asr_samples": sum(1 for label in labels if label == 0),
+            "tts_samples": sum(1 for label in labels if label == 1),
             "total_samples": len(labels),
             "train_accuracy": train_accuracy,
             "output_path": output_path,

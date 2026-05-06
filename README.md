@@ -26,7 +26,8 @@ for languages like Akan. Akan-BPE keeps the first phase deliberately small:
 - `scripts/download.py` - download and normalize Akan datasets into `data/`
 - `scripts/train_bpe.py` - train one tokenizer variant per run
 - `scripts/benchmark_fertility.py` - compare tokenizers in one unified experiment
-- `akan_bpe/` - thin helpers for JSONL loading, tokenizer training, fertility metrics, and experiment assembly
+- `scripts/router.py` - train ML classifier and benchmark routing strategies
+- `akan_bpe/` - thin helpers for JSONL loading, tokenizer training, fertility metrics, router, and classifier
 
 ## Quick Start
 
@@ -68,6 +69,12 @@ python scripts/benchmark_fertility.py \
     --asr-test-file data/aka_asr_test.jsonl \
     --tts-test-file data/pristine_twi_test.jsonl \
     --output results/tokenizer_fertility_experiment_001.json
+
+# 4. (Optional) Train ML router classifier
+python scripts/router.py train \
+    --asr-train data/aka_asr_train.jsonl \
+    --tts-train data/pristine_twi_train.jsonl \
+    --output models/router_classifier.pkl
 ```
 
 ## Tokenizer Variants
@@ -115,14 +122,24 @@ The unified experiment JSON contains:
 ```text
 Akan-BPE/
 ├── data/                  # Akan datasets (gitignored)
-├── models/                # Tokenizer artifacts (gitignored)
-├── results/               # Unified experiment outputs
+│   └── akan/              # Raw ASR downloads
+├── models/                # Tokenizer + classifier artifacts (gitignored)
+├── results/               # Experiment outputs (gitignored)
+├── config/                # Router configuration
 ├── scripts/
 │   ├── download.py
 │   ├── train_bpe.py
-│   └── benchmark_fertility.py
-├── akan_bpe/
+│   ├── benchmark_fertility.py
+│   └── router.py
+├── akan_bpe/              # Core library
+│   ├── tokenizers.py
+│   ├── router.py
+│   ├── classifier.py
+│   ├── metrics.py
+│   └── datasets.py
 ├── tests/
+├── train_eval.ipynb       # End-to-end walkthrough
+├── report.md              # Technical report
 ├── pyproject.toml
 ├── Makefile
 └── README.md
@@ -131,12 +148,14 @@ Akan-BPE/
 ## Roadmap
 
 - [x] Dataset download and normalization
-- [x] Tokenizer-only project reference
-- [x] Unified one-experiment-one-JSON benchmark flow
-- [ ] Compare `asr`, `tts`, and `mixed` against a baseline tokenizer
-- [ ] Decide whether specialization is strong enough to justify router or mux work later
+- [x] Train ASR, TTS, and Mixed tokenizers
+- [x] Fertility benchmark comparing all tokenizers vs baseline
+- [x] Implement and benchmark heuristic router
+- [x] Train ML classifier router (99.9% accuracy)
+- [x] Generate technical report (report.md)
+- [ ] Model integration (resize vocab, test generation)
+- [ ] Edge deployment (benchmark on hardware)
 
 ## License
 
 This project is licensed under the MIT License.
-e.

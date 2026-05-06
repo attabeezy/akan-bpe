@@ -17,14 +17,23 @@ from akan_bpe.io import write_json
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run one Akan-BPE fertility experiment.")
-    parser.add_argument("--experiment-id", required=True, help="Stable identifier for this experiment run.")
+    parser.add_argument(
+        "--experiment-id",
+        required=True,
+        help="Stable identifier for this experiment run.",
+    )
     parser.add_argument("--control-tokenizer", required=True, help="Baseline tokenizer reference.")
     parser.add_argument("--asr-tokenizer", required=True, help="ASR tokenizer path.")
     parser.add_argument("--tts-tokenizer", required=True, help="TTS tokenizer path.")
     parser.add_argument("--mixed-tokenizer", help="Optional mixed tokenizer path.")
     parser.add_argument("--asr-test-file", required=True, help="ASR JSONL test file.")
     parser.add_argument("--tts-test-file", required=True, help="TTS JSONL test file.")
-    parser.add_argument("--max-samples", type=int, default=None, help="Optional max samples per test set.")
+    parser.add_argument(
+        "--max-samples",
+        type=int,
+        default=None,
+        help="Optional max samples per test set.",
+    )
     parser.add_argument("--output", required=True, help="Unified experiment JSON output path.")
     args = parser.parse_args()
 

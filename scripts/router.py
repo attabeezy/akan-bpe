@@ -85,9 +85,7 @@ def main() -> None:
             use_ml_classifier=args.use_ml if hasattr(args, "use_ml") else False,
             classifier_path=config.get("classifier_path"),
         )
-        tokens, decision = (
-            router.route(args.text) if args.show_decision else (router.tokenize(args.text)[0], None)
-        )
+        tokens, decision = router.tokenize(args.text)
         if args.show_decision:
             print(f"Tokens: {tokens}")
             print(f"Selected: {decision.selected_tokenizer}")
@@ -99,8 +97,8 @@ def main() -> None:
     elif args.command == "benchmark":
         import json
 
-        from akan_bpe.datasets import load_jsonl_samples
         from akan_bpe.classifier import MLClassifierRouter
+        from akan_bpe.datasets import load_jsonl_samples
 
         config = load_router_config(args.config)
         use_ml = getattr(args, "use_ml", False)
@@ -166,7 +164,7 @@ def main() -> None:
             tts_path=args.tts_train,
             output_path=args.output,
         )
-        print(f"Classifier trained!")
+        print("Classifier trained!")
         print(f"ASR samples: {result['asr_samples']}")
         print(f"TTS samples: {result['tts_samples']}")
         print(f"Total samples: {result['total_samples']}")

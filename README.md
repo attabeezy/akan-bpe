@@ -12,7 +12,7 @@ for languages like Akan. Akan-BPE keeps the first phase deliberately small:
 
 - normalize Akan ASR and formal-text datasets
 - train tokenizer variants for `asr`, `tts`, and `mixed`
-- compare them against a baseline tokenizer in one unified fertility experiment JSON
+- compare them against multilingual baselines (XLM-R, mBERT, mT5) in one unified fertility experiment JSON
 
 ## Data Sources
 
@@ -35,6 +35,7 @@ for languages like Akan. Akan-BPE keeps the first phase deliberately small:
 
 ```bash
 pip install -e ".[dev]"
+pip install sentencepiece   # required for mT5 tokenizer
 ```
 
 ### Run Locally
@@ -57,12 +58,13 @@ python scripts/train_bpe.py \
 python scripts/train_bpe.py \
     --inputs data/aka_asr_train.jsonl data/pristine_twi_train.jsonl \
     --output models/mixed_tokenizer.json \
-    --name mixed
+    --name mixed \
+    --balance
 
 # 3. Run one unified fertility experiment
 python scripts/benchmark_fertility.py \
     --experiment-id tokenizer_fertility_experiment_001 \
-    --control-tokenizer gpt2 \
+    --baselines xlm-roberta-base bert-base-multilingual-cased google/mt5-base \
     --asr-tokenizer models/asr_tokenizer.json \
     --tts-tokenizer models/tts_tokenizer.json \
     --mixed-tokenizer models/mixed_tokenizer.json \
@@ -81,10 +83,10 @@ python scripts/router.py train \
 
 | Variant | Training Corpus | Purpose |
 |--------|------------------|---------|
-| `control` | Existing pretrained tokenizer | Baseline reference |
+| `baselines` | XLM-R, mBERT, mT5 (pretrained) | Multilingual reference baselines |
 | `asr` | `aka_asr_train.jsonl` | Specialized conversational tokenizer |
 | `tts` | `pristine_twi_train.jsonl` | Specialized formal tokenizer |
-| `mixed` | both training files | Single-tokenizer compromise |
+| `mixed` | both files, corpus-balanced | Single-tokenizer compromise |
 
 ## Metric
 
@@ -151,8 +153,11 @@ Akan-BPE/
 - [x] Train ASR, TTS, and Mixed tokenizers
 - [x] Fertility benchmark comparing all tokenizers vs baseline
 - [x] Implement and benchmark heuristic router
-- [x] Train ML classifier router (99.9% accuracy)
+- [x] Train ML classifier router (99.99% train/test accuracy)
 - [x] Generate technical report (report.md)
+- [x] Replace GPT-2 with multilingual baselines (XLM-R, mBERT, mT5)
+- [x] Fix mixed tokenizer corpus imbalance (balanced upsampling)
+- [x] Add held-out test evaluation to router classifier
 - [ ] Model integration (resize vocab, test generation)
 - [ ] Edge deployment (benchmark on hardware)
 

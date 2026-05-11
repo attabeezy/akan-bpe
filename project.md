@@ -408,6 +408,13 @@ Phase 1 answered the tokenizer question. Phase 2 asks whether those gains transl
 
 **Goal:** Verify that fertility reduction translates into measurable downstream benefit — faster inference, lower perplexity, or better generation — not just a smaller token count.
 
+**Current status:** 2A1 scaffolding is implemented in-repo. The repo now contains:
+
+- `akan_bpe/model_integration.py` for dataset prep, tokenizer/model loading, token-count comparison, LoRA/QLoRA setup, eval, generation samples, and JSON artifact creation
+- `scripts/model_integration.py` for one CLI-driven experiment run
+- `phase2a_qwen3_tts_colab.ipynb` for the first real Colab GPU run
+- `tests/test_model_integration.py` for CPU-safe orchestration and artifact-contract coverage
+
 **Hardware baseline:** Free Kaggle/Colab GPU, typically T4/P100-class. Train and evaluate the smaller models first; treat larger models as QLoRA-only or reference-only unless paid GPU access is available.
 
 **Model ladder:**
@@ -450,6 +457,8 @@ Phase 1 answered the tokenizer question. Phase 2 asks whether those gains transl
    - **Inference speed** — tokens/second before and after to quantify the fertility gain in practice
 
 6. **Record experiment output** — save one structured JSON per run under `results/`, including model ID, tokenizer path, dataset paths, fertility, perplexity, generation samples, timing, hardware, and memory notes.
+
+**First real run path:** Use `phase2a_qwen3_tts_colab.ipynb` to install `.[dev,train]` plus `bitsandbytes`, verify `data/pristine_twi_train.jsonl`, `data/pristine_twi_test.jsonl`, and `models/tts_tokenizer.json`, then call `scripts/model_integration.py` in `colab-qlora` mode.
 
 **Success criterion:** Fine-tuned model with new tokenizer matches or exceeds base model perplexity on Akan test text, with fewer tokens processed per sample.
 

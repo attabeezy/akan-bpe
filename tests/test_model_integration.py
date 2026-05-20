@@ -30,7 +30,13 @@ def test_load_experiment_tokenizer_and_build_text_dataset(tmp_path: Path) -> Non
     row = dataset[0]
     assert tokenizer.pad_token is not None
     assert len(row["input_ids"]) == 8
-    assert row["labels"] == row["input_ids"]
+    # Padding positions must be masked with -100 so they are excluded from the loss.
+    # Non-padding positions must match input_ids exactly.
+    for label, mask, token_id in zip(row["labels"], row["attention_mask"], row["input_ids"]):
+        if mask == 1:
+            assert label == token_id
+        else:
+            assert label == -100
 
 
 def test_compute_token_count_comparison_uses_base_and_experiment_tokenizers(

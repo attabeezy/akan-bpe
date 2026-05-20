@@ -20,7 +20,18 @@ class PeftConfigSpec:
     rank: int = 16
     alpha: int = 32
     dropout: float = 0.05
-    target_modules: tuple[str, ...] = ("q_proj", "k_proj", "v_proj", "o_proj")
+    # Attention + MLP projections for Qwen3 (and most LLaMA-style models).
+    # Including MLP layers (gate/up/down) alongside attention gives meaningfully
+    # better QLoRA results; attention-only is a common under-powered default.
+    target_modules: tuple[str, ...] = (
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+        "gate_proj",
+        "up_proj",
+        "down_proj",
+    )
 
 
 @dataclass(frozen=True)
@@ -58,9 +69,16 @@ def load_texts(path: Path, max_samples: int | None = None) -> list[str]:
 
 def load_experiment_tokenizer(tokenizer_path: Path) -> PreTrainedTokenizerFast:
     """Load the local fast tokenizer used for model integration."""
-    tokenizer = PreTrainedTokenizerFast(tokenizer_file=str(tokenizer_path))
+    tokenizer = PreTrainedTokenizerFast(
+        tokenizer_file=str(tokenizer_path),
+        bos_token="<s>",
+        eos_token="</s>",
+        pad_token="<pad>",
+        unk_token="[UNK]",
+    )
+    # Ensure pad_token is set even if not in the JSON, defaulting to a common fallback if needed.
     if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token or tokenizer.unk_token or "[PAD]"
+        tokenizer.pad_token = tokenizer.eos_token or "[PAD]"
     return tokenizer
 
 
@@ -78,11 +96,18 @@ def build_text_dataset(
             padding="max_length",
             max_length=max_length,
         )
+        input_ids = encoded["input_ids"]
+        attention_mask = encoded["attention_mask"]
+        # Mask padding positions with -100 so CrossEntropyLoss ignores them.
+        labels = [
+            token_id if mask == 1 else -100
+            for token_id, mask in zip(input_ids, attention_mask)
+        ]
         rows.append(
             {
-                "input_ids": encoded["input_ids"],
-                "attention_mask": encoded["attention_mask"],
-                "labels": list(encoded["input_ids"]),
+                "input_ids": input_ids,
+                "attention_mask": attention_mask,
+                "labels": labels,
             }
         )
     return Dataset.from_list(rows)
@@ -228,15 +253,17 @@ def _build_model_and_training_args(
             load_in_4bit=True,
             bnb_4bit_quant_type="nf4",
             bnb_4bit_use_double_quant=True,
+            # T4 (Turing) does not have native bfloat16 tensor cores; float16 is
+            # the right compute dtype here.
             bnb_4bit_compute_dtype=torch.float16,
         )
+        # Omit device_map="auto" for training — HF docs say it is inference-only
+        # and can cause unexpected device placement during the forward pass.
         model = auto_model_for_causal_lm.from_pretrained(
             config.model_id,
-            device_map="auto",
             quantization_config=quantization_config,
-            torch_dtype=torch.float16,
+            dtype="auto",
         )
-        model = prepare_model_for_kbit_training(model)
         fp16 = True
     else:
         model = auto_model_for_causal_lm.from_pretrained(config.model_id)
@@ -246,7 +273,25 @@ def _build_model_and_training_args(
         model.config.pad_token_id = tokenizer.pad_token_id
     if tokenizer.eos_token_id is not None:
         model.config.eos_token_id = tokenizer.eos_token_id
-    model.resize_token_embeddings(len(tokenizer))
+
+    # Disable weight tying before resize so embed_tokens and lm_head remain
+    # independent after the vocab is expanded.  Qwen3 ships with
+    # tie_word_embeddings=True; keeping it set silently breaks the tie and
+    # produces a noisy warning when both weights are present in the checkpoint.
+    model.config.tie_word_embeddings = False
+
+    # Resize BEFORE prepare_model_for_kbit_training and get_peft_model.
+    # Resizing after PEFT wrapping can cause embedding size mismatches.
+    # pad_to_multiple_of=64 aligns the vocab size to a hardware-friendly boundary.
+    model.resize_token_embeddings(len(tokenizer), pad_to_multiple_of=64)
+
+    if config.device_mode == "colab-qlora":
+        # use_reentrant=False avoids a PyTorch deprecation warning with newer
+        # versions of torch that changed the default reentrant behaviour.
+        model = prepare_model_for_kbit_training(
+            model,
+            gradient_checkpointing_kwargs={"use_reentrant": False},
+        )
 
     peft_config = lora_config_cls(
         r=config.peft.rank,
@@ -255,6 +300,9 @@ def _build_model_and_training_args(
         target_modules=list(config.peft.target_modules),
         bias="none",
         task_type="CAUSAL_LM",
+        # Save the resized embedding and LM head alongside the LoRA adapter so
+        # the expanded vocab is not lost when loading from the adapter checkpoint.
+        modules_to_save=["embed_tokens", "lm_head"],
     )
     model = get_peft_model(model, peft_config)
 
@@ -267,10 +315,12 @@ def _build_model_and_training_args(
         gradient_accumulation_steps=config.grad_accum,
         num_train_epochs=config.epochs,
         learning_rate=config.learning_rate,
-        evaluation_strategy="epoch",
+        eval_strategy="epoch",
         save_strategy="epoch",
+        load_best_model_at_end=True,
         logging_strategy="steps",
         logging_steps=10,
+        gradient_checkpointing=config.device_mode == "colab-qlora",
         report_to=[],
         remove_unused_columns=False,
         seed=config.seed,
@@ -312,7 +362,7 @@ def run_model_integration(config: ModelIntegrationConfig) -> dict[str, object]:
         args=training_args,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
-        tokenizer=tokenizer,
+        processing_class=tokenizer,  # replaces deprecated tokenizer= (transformers 4.46+)
         data_collator=default_data_collator,
     )
     trainer.train()
@@ -341,7 +391,6 @@ def run_model_integration(config: ModelIntegrationConfig) -> dict[str, object]:
         generation_samples.append({"prompt": prompt, "completion": completion})
 
     output_dir = Path(config.output_dir)
-    ensure_parent_dir(output_dir / "adapter_config.json")
     trainer.save_model(str(output_dir))
     tokenizer.save_pretrained(str(output_dir))
 

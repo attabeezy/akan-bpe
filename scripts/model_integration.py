@@ -50,7 +50,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--lora-dropout", type=float, default=0.05, help="LoRA dropout.")
     parser.add_argument(
         "--lora-target-modules",
-        default="q_proj,k_proj,v_proj,o_proj",
+        default="q_proj,k_proj,v_proj,o_proj,gate_proj,up_proj,down_proj",
         help="Comma-separated target modules for LoRA.",
     )
     parser.add_argument("--seed", type=int, default=42, help="Random seed.")

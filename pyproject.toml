@@ -47,6 +47,7 @@ train = [
     "torch>=2.2.0",
     "accelerate>=0.30.0",
     "peft>=0.11.0",
+    "bitsandbytes>=0.43.0",
 ]
 
 [tool.setuptools.packages.find]

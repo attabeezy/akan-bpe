@@ -18,7 +18,11 @@ from akan_bpe.model_integration import ModelIntegrationConfig, PeftConfigSpec, r
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run one Akan-BPE model-integration experiment.")
     parser.add_argument("--experiment-id", required=True, help="Stable identifier for this run.")
-    parser.add_argument("--model-id", required=True, help="Hugging Face model identifier.")
+    parser.add_argument(
+        "--model-id",
+        required=True,
+        help="Hugging Face model identifier. `colab-qlora` currently supports only Qwen/Qwen3-0.6B.",
+    )
     parser.add_argument("--tokenizer-path", required=True, help="Local tokenizer JSON path.")
     parser.add_argument("--train-file", required=True, help="Training JSONL file.")
     parser.add_argument("--eval-file", required=True, help="Evaluation JSONL file.")
@@ -31,7 +35,7 @@ def parse_args() -> argparse.Namespace:
         "--device-mode",
         choices=("smoke", "colab-qlora"),
         default="smoke",
-        help="Execution mode for CPU smoke tests or Colab QLoRA runs.",
+        help="Execution mode for tiny-model pipeline validation or the Qwen/Qwen3-0.6B Colab QLoRA path.",
     )
     parser.add_argument("--max-train-samples", type=int, default=None, help="Optional train cap.")
     parser.add_argument("--max-eval-samples", type=int, default=None, help="Optional eval cap.")

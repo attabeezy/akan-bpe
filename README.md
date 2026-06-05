@@ -102,6 +102,14 @@ python scripts/model_integration.py \
     --max-eval-samples 32
 ```
 
+`smoke` mode is a tiny-model pipeline validation run. It checks tokenizer loading,
+dataset preparation, embedding resize, a forward/eval pass, and generation, then
+writes the result JSON without performing full fine-tuning or saving adapters.
+
+`colab-qlora` is currently an explicit 2A1 path for `Qwen/Qwen3-0.6B` on Colab/T4.
+It performs adapter training, eval, generation, saves adapters plus tokenizer, and
+verifies the saved output can be reloaded for inference.
+
 ## Tokenizer Variants
 
 | Variant | Training Corpus | Purpose |

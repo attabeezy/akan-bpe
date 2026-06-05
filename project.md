@@ -422,7 +422,7 @@ Phase 1 answered the tokenizer question. Phase 2 asks whether those gains transl
 
 | Phase | Model | Role | Free-GPU feasibility |
 |---|---|---|---|
-| **2A1** | `Qwen/Qwen3-0.6B` | Pipeline smoke test: tokenizer replacement, embedding resize, LoRA/QLoRA loop, eval plumbing, save/load | Feasible |
+| **2A1** | `Qwen/Qwen3-0.6B` | First real Colab/T4 QLoRA run: tokenizer replacement, embedding resize, train/eval, generation, save/load verification | Feasible |
 | **2A2** | `Qwen/Qwen3-1.7B` | Main small-model experiment after 2A1 proves the path | Feasible with LoRA/QLoRA |
 | **2A3** | `google/gemma-3-1b-*` | Broad multilingual vendor/architecture comparison | Feasible; check Gemma license and PT/IT choice |
 | **2A4** | `meta-llama/Llama-3.2-1B` or `meta-llama/Llama-3.2-3B` | Deployment ecosystem comparison | 1B feasible; 3B QLoRA with conservative settings |

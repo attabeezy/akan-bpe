@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -11,9 +12,11 @@ from transformers import AutoTokenizer, PreTrainedTokenizerFast
 
 from akan_bpe.datasets import load_jsonl_samples, samples_to_texts
 from akan_bpe.io import ensure_parent_dir
+from akan_bpe.metrics import BpbResult, bits_per_byte, count_utf8_bytes
 
 DEFAULT_SMOKE_MODEL_ID = "sshleifer/tiny-gpt2"
 SUPPORTED_COLAB_QLORA_MODEL_IDS = ("Qwen/Qwen3-0.6B",)
+VALID_EMBEDDING_INIT_MODES = ("random", "mean_subword")
 
 
 @dataclass(frozen=True)
@@ -60,6 +63,15 @@ class ModelIntegrationConfig:
     seed: int = 42
     generation_samples: int = 3
     generation_max_new_tokens: int = 32
+    # Embedding initialization for the swapped-in Akan vocabulary. "random" keeps
+    # whatever resize_token_embeddings produces; "mean_subword" initializes each
+    # Akan-vocab row from the mean of the base model's subword embeddings for that
+    # token's surface string (the Phase 2A modeling contribution).
+    embedding_init_mode: str = "random"
+    # When True, also load the unmodified base model and compute its bits-per-byte
+    # on the same eval bytes for an honest cross-tokenizer comparison. Disable to
+    # save a second model load when GPU memory is tight.
+    compute_base_bpb: bool = True
 
 
 def _set_model_token_config(model: Any, tokenizer: PreTrainedTokenizerFast) -> None:
@@ -151,10 +163,7 @@ def _build_causal_example(
         input_ids.extend([tokenizer.pad_token_id] * pad_length)
         attention_mask.extend([0] * pad_length)
 
-    labels = [
-        token_id if mask == 1 else -100
-        for token_id, mask in zip(input_ids, attention_mask)
-    ]
+    labels = [token_id if mask == 1 else -100 for token_id, mask in zip(input_ids, attention_mask)]
     return {
         "input_ids": input_ids,
         "attention_mask": attention_mask,
@@ -168,9 +177,7 @@ def build_text_dataset(
     max_length: int,
 ) -> Dataset:
     """Tokenize texts into fixed-width causal LM training examples."""
-    return Dataset.from_list(
-        [_build_causal_example(text, tokenizer, max_length) for text in texts]
-    )
+    return Dataset.from_list([_build_causal_example(text, tokenizer, max_length) for text in texts])
 
 
 def compute_token_count_stats(tokenizer: Any, texts: list[str]) -> dict[str, float | int]:
@@ -217,6 +224,214 @@ def compute_token_count_comparison(
     }
 
 
+def compute_model_bpb(
+    model: Any,
+    eval_dataset: Dataset,
+    total_bytes: int,
+    torch: Any,
+) -> BpbResult:
+    """Compute bits-per-byte for a causal LM over an eval dataset.
+
+    Sums the per-token negative log-likelihood (in nats) across the dataset using
+    an explicit causal shift and a sum-reduction cross-entropy over non-masked
+    label positions, then converts to bits and divides by ``total_bytes``. The
+    byte count is tokenizer-independent, so the result is comparable across models
+    that use different tokenizers.
+    """
+    cross_entropy = torch.nn.CrossEntropyLoss(reduction="sum", ignore_index=-100)
+    total_nll_nats = 0.0
+    num_target_tokens = 0
+    model.eval()
+    with torch.no_grad():
+        for row in eval_dataset:
+            input_ids = torch.tensor([row["input_ids"]], device=model.device)
+            attention_mask = torch.tensor([row["attention_mask"]], device=model.device)
+            labels = torch.tensor([row["labels"]], device=model.device)
+            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+            # Shift so token t predicts token t+1 (standard causal LM alignment).
+            shift_logits = outputs.logits[:, :-1, :]
+            shift_labels = labels[:, 1:]
+            loss = cross_entropy(
+                shift_logits.reshape(-1, shift_logits.size(-1)).float(),
+                shift_labels.reshape(-1),
+            )
+            total_nll_nats += float(loss.item())
+            num_target_tokens += int((shift_labels != -100).sum().item())
+
+    bpb = bits_per_byte(total_nll_nats, total_bytes)
+    total_nll_bits = total_nll_nats / math.log(2)
+    return BpbResult(
+        bits_per_byte=bpb,
+        total_nll_bits=total_nll_bits,
+        total_bytes=total_bytes,
+        num_target_tokens=num_target_tokens,
+    )
+
+
+def _load_base_model_for_bpb(
+    runtime_model_id: str,
+    auto_model_for_causal_lm: Any,
+    torch: Any,
+    quantized: bool,
+) -> Any:
+    """Load the unmodified base model (original vocab) for a base BPB pass."""
+    if quantized:
+        training_stack = _import_training_stack()
+        bits_and_bytes_config = training_stack["BitsAndBytesConfig"]
+        quantization_config = bits_and_bytes_config(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_use_double_quant=True,
+            bnb_4bit_compute_dtype=torch.float16,
+        )
+        return auto_model_for_causal_lm.from_pretrained(
+            runtime_model_id,
+            quantization_config=quantization_config,
+            dtype="auto",
+        )
+    return auto_model_for_causal_lm.from_pretrained(runtime_model_id)
+
+
+def compute_bpb_metrics(
+    config: ModelIntegrationConfig,
+    runtime_model_id: str,
+    experiment_model: Any,
+    experiment_eval_dataset: Dataset,
+    eval_texts: list[str],
+    auto_model_for_causal_lm: Any,
+    torch: Any,
+    quantized: bool,
+) -> dict[str, object]:
+    """Compute bits-per-byte for the fine-tuned model and (optionally) the base model.
+
+    Both models are scored on the same held-out bytes; because BPB normalizes by
+    UTF-8 byte count rather than token count, the two values are directly
+    comparable across the tokenizer swap.
+    """
+    total_bytes = count_utf8_bytes(eval_texts)
+    experiment = compute_model_bpb(experiment_model, experiment_eval_dataset, total_bytes, torch)
+
+    base_result: BpbResult | None = None
+    if config.compute_base_bpb:
+        base_tokenizer: Any = AutoTokenizer.from_pretrained(runtime_model_id)
+        if base_tokenizer.pad_token is None:
+            base_tokenizer.pad_token = base_tokenizer.eos_token or base_tokenizer.unk_token
+        base_eval_dataset = build_text_dataset(eval_texts, base_tokenizer, config.max_length)
+        base_model = _load_base_model_for_bpb(
+            runtime_model_id, auto_model_for_causal_lm, torch, quantized
+        )
+        _set_model_token_config(base_model, base_tokenizer)
+        try:
+            base_result = compute_model_bpb(base_model, base_eval_dataset, total_bytes, torch)
+        finally:
+            del base_model
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+
+    metrics: dict[str, object] = {
+        "experiment": experiment.to_dict(),
+        "base": base_result.to_dict() if base_result is not None else None,
+        "total_bytes": total_bytes,
+    }
+    if base_result is not None:
+        metrics["improvement"] = base_result.bits_per_byte - experiment.bits_per_byte
+    return metrics
+
+
+def _init_embeddings_mean_of_subword(
+    model: Any,
+    experiment_tokenizer: PreTrainedTokenizerFast,
+    base_tokenizer: Any,
+    base_input_embeddings: Any,
+    base_output_embeddings: Any | None,
+    torch: Any,
+) -> int:
+    """Initialize the resized embedding rows from base subword embeddings.
+
+    For each id in the Akan vocabulary, the token's surface string is re-encoded
+    with the base tokenizer and the new embedding row is set to the mean of the
+    corresponding base-model rows. Tokens whose surface is empty or maps to no
+    base subwords fall back to the global mean of the base embedding matrix. The
+    same scheme is applied to the LM head when output embeddings are untied.
+    """
+    input_embeddings = model.get_input_embeddings()
+    output_embeddings = model.get_output_embeddings()
+    base_input_mean = base_input_embeddings.mean(dim=0)
+    base_output_mean = (
+        base_output_embeddings.mean(dim=0) if base_output_embeddings is not None else None
+    )
+    base_vocab_size = base_input_embeddings.size(0)
+
+    rows_initialized = 0
+    with torch.no_grad():
+        for token_id in range(len(experiment_tokenizer)):
+            token: Any = experiment_tokenizer.convert_ids_to_tokens(token_id)
+            surface = experiment_tokenizer.convert_tokens_to_string([token]) if token else ""
+            base_ids = (
+                base_tokenizer.encode(surface, add_special_tokens=False) if surface.strip() else []
+            )
+            base_ids = [bid for bid in base_ids if 0 <= bid < base_vocab_size]
+            if base_ids:
+                index = torch.tensor(base_ids, device=base_input_embeddings.device)
+                input_vector = base_input_embeddings.index_select(0, index).mean(dim=0)
+                output_vector = (
+                    base_output_embeddings.index_select(0, index).mean(dim=0)
+                    if base_output_embeddings is not None
+                    else None
+                )
+            else:
+                input_vector = base_input_mean
+                output_vector = base_output_mean
+            input_embeddings.weight[token_id] = input_vector.to(
+                dtype=input_embeddings.weight.dtype, device=input_embeddings.weight.device
+            )
+            if output_embeddings is not None and output_vector is not None:
+                output_embeddings.weight[token_id] = output_vector.to(
+                    dtype=output_embeddings.weight.dtype,
+                    device=output_embeddings.weight.device,
+                )
+            rows_initialized += 1
+    return rows_initialized
+
+
+def resize_and_init_embeddings(
+    config: ModelIntegrationConfig,
+    model: Any,
+    tokenizer: PreTrainedTokenizerFast,
+    runtime_model_id: str,
+    torch: Any,
+) -> dict[str, object]:
+    """Resize embeddings to the Akan vocab and apply the configured init scheme.
+
+    Base input/output embedding matrices are captured *before* the resize so the
+    mean-of-subword scheme reads only the original (pre-swap) vocabulary. With
+    ``embedding_init_mode="random"`` this is just the standard resize.
+    """
+    base_input_embeddings = model.get_input_embeddings().weight.detach().clone()
+    output_embeddings = model.get_output_embeddings()
+    base_output_embeddings = (
+        output_embeddings.weight.detach().clone() if output_embeddings is not None else None
+    )
+
+    # Resize BEFORE prepare_model_for_kbit_training and get_peft_model.
+    # pad_to_multiple_of=64 aligns the vocab size to a hardware-friendly boundary.
+    model.resize_token_embeddings(len(tokenizer), pad_to_multiple_of=64)
+
+    if config.embedding_init_mode == "random":
+        return {"mode": "random", "rows_initialized": 0}
+
+    base_tokenizer = AutoTokenizer.from_pretrained(runtime_model_id)
+    rows = _init_embeddings_mean_of_subword(
+        model=model,
+        experiment_tokenizer=tokenizer,
+        base_tokenizer=base_tokenizer,
+        base_input_embeddings=base_input_embeddings,
+        base_output_embeddings=base_output_embeddings,
+        torch=torch,
+    )
+    return {"mode": "mean_subword", "rows_initialized": rows}
+
+
 def select_generation_prompts(texts: list[str], limit: int) -> list[str]:
     """Pick short prompts from eval texts for qualitative generation samples."""
     prompts = []
@@ -233,10 +448,11 @@ def build_result_payload(
     train_texts: list[str],
     eval_texts: list[str],
     token_count_comparison: dict[str, object],
-    eval_metrics: dict[str, float],
+    eval_metrics: dict[str, object],
     generation_samples: list[dict[str, str]],
     device: dict[str, object],
     output_model_dir: str | None,
+    embedding_init: dict[str, object] | None = None,
     smoke: dict[str, object] | None = None,
     reload_verification: dict[str, object] | None = None,
     training: dict[str, object] | None = None,
@@ -258,6 +474,8 @@ def build_result_payload(
         "learning_rate": config.learning_rate,
         "peft": asdict(config.peft),
         "device_mode": config.device_mode,
+        "embedding_init_mode": config.embedding_init_mode,
+        "embedding_init": embedding_init,
         "device": device,
         "token_count_comparison": token_count_comparison,
         "eval": eval_metrics,
@@ -336,7 +554,7 @@ def _build_model_and_training_args(
     config: ModelIntegrationConfig,
     tokenizer: PreTrainedTokenizerFast,
     runtime_model_id: str,
-) -> tuple[Any, Any, dict[str, object]]:
+) -> tuple[Any, Any, dict[str, object], dict[str, object]]:
     stack = _import_training_stack()
     torch = stack["torch"]
     auto_model_for_causal_lm = stack["AutoModelForCausalLM"]
@@ -379,8 +597,7 @@ def _build_model_and_training_args(
 
     # Resize BEFORE prepare_model_for_kbit_training and get_peft_model.
     # Resizing after PEFT wrapping can cause embedding size mismatches.
-    # pad_to_multiple_of=64 aligns the vocab size to a hardware-friendly boundary.
-    model.resize_token_embeddings(len(tokenizer), pad_to_multiple_of=64)
+    embedding_init = resize_and_init_embeddings(config, model, tokenizer, runtime_model_id, torch)
     _validate_target_modules(model, config.peft.target_modules)
 
     if config.device_mode == "colab-qlora":
@@ -430,7 +647,7 @@ def _build_model_and_training_args(
         "device_count": int(torch.cuda.device_count()),
         "device_name": torch.cuda.get_device_name(0) if torch.cuda.is_available() else "cpu",
     }
-    return model, training_args, device
+    return model, training_args, device, embedding_init
 
 
 def _generate_samples(
@@ -471,25 +688,33 @@ def _run_smoke_validation(
     eval_dataset: Dataset,
     eval_texts: list[str],
     device: dict[str, object],
-) -> tuple[dict[str, float], list[dict[str, str]], dict[str, object]]:
+) -> tuple[dict[str, object], list[dict[str, str]], dict[str, object], dict[str, object]]:
     stack = _import_runtime_stack()
     torch = stack["torch"]
     auto_model_for_causal_lm = stack["AutoModelForCausalLM"]
 
     model = auto_model_for_causal_lm.from_pretrained(runtime_model_id)
     _set_model_token_config(model, tokenizer)
-    model.resize_token_embeddings(len(tokenizer), pad_to_multiple_of=64)
+    embedding_init = resize_and_init_embeddings(config, model, tokenizer, runtime_model_id, torch)
     model.eval()
 
     row = eval_dataset[0]
-    batch = {
-        key: torch.tensor([row[key]])
-        for key in ("input_ids", "attention_mask", "labels")
-    }
+    batch = {key: torch.tensor([row[key]]) for key in ("input_ids", "attention_mask", "labels")}
     with torch.no_grad():
         outputs = model(**batch)
     eval_loss = float(outputs.loss.item())
     perplexity = float(torch.exp(torch.tensor(eval_loss)).item())
+
+    bpb = compute_bpb_metrics(
+        config=config,
+        runtime_model_id=runtime_model_id,
+        experiment_model=model,
+        experiment_eval_dataset=eval_dataset,
+        eval_texts=eval_texts,
+        auto_model_for_causal_lm=auto_model_for_causal_lm,
+        torch=torch,
+        quantized=False,
+    )
 
     prompts = select_generation_prompts(eval_texts, config.generation_samples)
     with torch.no_grad():
@@ -508,7 +733,12 @@ def _run_smoke_validation(
         "generation_succeeded": True,
         "embedding_resize_succeeded": True,
     }
-    return {"eval_loss": eval_loss, "perplexity": perplexity}, generation_samples, smoke
+    eval_metrics: dict[str, object] = {
+        "eval_loss": eval_loss,
+        "perplexity": perplexity,
+        "bpb": bpb,
+    }
+    return eval_metrics, generation_samples, smoke, embedding_init
 
 
 def verify_saved_qwen_artifacts(
@@ -567,8 +797,15 @@ def verify_saved_qwen_artifacts(
 def run_model_integration(config: ModelIntegrationConfig) -> dict[str, object]:
     """Run one end-to-end model-integration experiment and return its result payload."""
     validate_colab_qlora_config(config)
+    if config.embedding_init_mode not in VALID_EMBEDDING_INIT_MODES:
+        supported = ", ".join(VALID_EMBEDDING_INIT_MODES)
+        raise ValueError(
+            f"Unknown embedding_init_mode={config.embedding_init_mode!r}; "
+            f"supported values: {supported}."
+        )
     runtime_stack = _import_runtime_stack()
     torch = runtime_stack["torch"]
+    auto_model_for_causal_lm = runtime_stack["AutoModelForCausalLM"]
     set_seed = runtime_stack["set_seed"]
     trainer_cls = None
     default_data_collator = None
@@ -597,7 +834,7 @@ def run_model_integration(config: ModelIntegrationConfig) -> dict[str, object]:
             "device_count": int(torch.cuda.device_count()),
             "device_name": torch.cuda.get_device_name(0) if torch.cuda.is_available() else "cpu",
         }
-        eval_metrics, generation_samples, smoke = _run_smoke_validation(
+        eval_metrics, generation_samples, smoke, embedding_init = _run_smoke_validation(
             config=config,
             runtime_model_id=runtime_model_id,
             tokenizer=tokenizer,
@@ -615,12 +852,15 @@ def run_model_integration(config: ModelIntegrationConfig) -> dict[str, object]:
             generation_samples=generation_samples,
             device=device,
             output_model_dir=None,
+            embedding_init=embedding_init,
             smoke=smoke,
             reload_verification=None,
             training=None,
         )
 
-    model, training_args, device = _build_model_and_training_args(config, tokenizer, runtime_model_id)
+    model, training_args, device, embedding_init = _build_model_and_training_args(
+        config, tokenizer, runtime_model_id
+    )
 
     trainer = trainer_cls(
         model=model,
@@ -636,6 +876,17 @@ def run_model_integration(config: ModelIntegrationConfig) -> dict[str, object]:
     perplexity = float(torch.exp(torch.tensor(eval_loss)).item())
 
     model.eval()
+    bpb = compute_bpb_metrics(
+        config=config,
+        runtime_model_id=runtime_model_id,
+        experiment_model=model,
+        experiment_eval_dataset=eval_dataset,
+        eval_texts=eval_texts,
+        auto_model_for_causal_lm=auto_model_for_causal_lm,
+        torch=torch,
+        quantized=config.device_mode == "colab-qlora",
+    )
+
     prompts = select_generation_prompts(eval_texts, config.generation_samples)
     generation_samples = _generate_samples(
         model=model,
@@ -664,10 +915,12 @@ def run_model_integration(config: ModelIntegrationConfig) -> dict[str, object]:
         eval_metrics={
             "eval_loss": eval_loss,
             "perplexity": perplexity,
+            "bpb": bpb,
         },
         generation_samples=generation_samples,
         device=device,
         output_model_dir=config.output_dir,
+        embedding_init=embedding_init,
         smoke=None,
         reload_verification=reload_verification,
         training={

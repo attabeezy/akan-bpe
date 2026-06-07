@@ -57,6 +57,19 @@ def parse_args() -> argparse.Namespace:
         default="q_proj,k_proj,v_proj,o_proj,gate_proj,up_proj,down_proj",
         help="Comma-separated target modules for LoRA.",
     )
+    parser.add_argument(
+        "--embedding-init-mode",
+        choices=("random", "mean_subword"),
+        default="random",
+        help="Init for swapped-in Akan embeddings: 'random' (resize default) or "
+        "'mean_subword' (mean of base subword embeddings).",
+    )
+    parser.add_argument(
+        "--skip-base-bpb",
+        dest="compute_base_bpb",
+        action="store_false",
+        help="Skip the extra base-model bits-per-byte pass (saves a second model load).",
+    )
     parser.add_argument("--seed", type=int, default=42, help="Random seed.")
     parser.add_argument(
         "--generation-samples",
@@ -104,6 +117,8 @@ def main() -> None:
         seed=args.seed,
         generation_samples=args.generation_samples,
         generation_max_new_tokens=args.generation_max_new_tokens,
+        embedding_init_mode=args.embedding_init_mode,
+        compute_base_bpb=args.compute_base_bpb,
     )
 
     payload = run_model_integration(config)

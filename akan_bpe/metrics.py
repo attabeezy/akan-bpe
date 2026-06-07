@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import statistics
 from dataclasses import dataclass
 from typing import Any
@@ -69,3 +70,43 @@ def compute_fertility(
         num_samples=len(texts),
         fertility_std=std,
     )
+
+
+@dataclass(frozen=True)
+class BpbResult:
+    """Bits-per-byte summary for one model over one held-out text set.
+
+    BPB is tokenizer-agnostic: the byte count of the text is fixed regardless of
+    how it is tokenized, so BPB values from models using different tokenizers are
+    directly comparable (unlike raw perplexity).
+    """
+
+    bits_per_byte: float
+    total_nll_bits: float
+    total_bytes: int
+    num_target_tokens: int
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "bits_per_byte": self.bits_per_byte,
+            "total_nll_bits": self.total_nll_bits,
+            "total_bytes": self.total_bytes,
+            "num_target_tokens": self.num_target_tokens,
+        }
+
+
+def count_utf8_bytes(texts: list[str]) -> int:
+    """Count the total number of UTF-8 bytes across a list of texts."""
+    return sum(len(text.encode("utf-8")) for text in texts)
+
+
+def bits_per_byte(total_nll_nats: float, total_bytes: int) -> float:
+    """Convert a summed negative log-likelihood (in nats) into bits-per-byte.
+
+    BPB = (total_nll_nats / ln 2) / total_bytes. Returns 0.0 when there are no
+    bytes to avoid a division error.
+    """
+    if total_bytes <= 0:
+        return 0.0
+    total_nll_bits = total_nll_nats / math.log(2)
+    return total_nll_bits / total_bytes

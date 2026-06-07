@@ -1,11 +1,11 @@
 # Akan-BPE — Project Reference
 **Eliminating the Tokenization Tax for Akan via BPE Tokenizer Experiments**
 
-**Status:** Phase 2A In Progress (v0.2.0) — 2A1 scaffold complete  
+**Status:** Phase 2A In Progress (v0.2.0) — 2A1 complete (first Colab QLoRA run); 2A2 next  
 **Scope:** Akan (Twi), tokenizer experiments with ML routing  
-**Completed:** Tokenizer training, fertility benchmarks vs multilingual baselines, balanced mixed tokenizer, router with held-out eval  
-**Current hardware:** CPU / Colab  
-**Next hardware:** GPU for model fine-tuning; Dell Latitude 7400 for edge deployment
+**Completed:** Tokenizer training, fertility benchmarks vs multilingual baselines, balanced mixed tokenizer, router with held-out eval, first model-integration run (Qwen3-0.6B + Akan TTS tokenizer on Colab/T4)  
+**Current hardware:** CPU (local) / Colab T4 (model integration)  
+**Next hardware:** Continued Colab/Kaggle GPU for the model ladder; Dell Latitude 7400 for edge deployment
 
 ---
 
@@ -38,9 +38,9 @@ The active scope is tokenizer + routing experiments.
 - Heuristic router implementation
 - ML classifier router (99.99% train/test accuracy on stratified held-out split)
 
-**Next phases:**
-- Model integration (embedding resize, fine-tune, eval)
-- Edge deployment (GGUF export, Dell Latitude 7400 benchmarking)
+**In progress / next phases:**
+- Model integration — 2A1 complete: Qwen3-0.6B QLoRA fine-tune with the Akan TTS tokenizer on Colab/T4 (49.5% fertility reduction, eval perplexity 83.81, coherent Twi generation). 2A2 (Qwen3-1.7B) is next.
+- Edge deployment (GGUF export, Dell Latitude 7400 benchmarking) — blocked on a usable Phase 2A model artifact
 
 ---
 
@@ -358,14 +358,20 @@ These should only be attempted after the simpler comparisons are complete.
 
 ### 14.3 Model integration (IN PROGRESS — Phase 2A)
 
-Phase 2A1 scaffold is implemented. The repo now contains:
+Phase 2A1 is complete. The first real Colab QLoRA run executed end-to-end. The repo contains:
 
 - `akan_bpe/model_integration.py` — dataset prep, tokenizer/model loading, token-count comparison, LoRA/QLoRA setup, eval, generation samples, JSON artifact creation
 - `scripts/model_integration.py` — CLI-driven experiment runner
-- `phase2a_qwen3_tts_colab.ipynb` — first Colab GPU run targeting `Qwen/Qwen3-0.6B`
+- `phase2a_qwen3_tts_colab.ipynb` — executed Colab/T4 run for `Qwen/Qwen3-0.6B` (outputs preserved in the notebook)
 - `tests/test_model_integration.py` — CPU-safe orchestration and artifact-contract coverage
 
-Next step is running the first real Colab experiment (2A1) before advancing to 2A2 (Qwen3-1.7B).
+**2A1 result (Qwen3-0.6B + Akan TTS tokenizer, QLoRA 4-bit nf4, Tesla T4, 1 epoch):**
+
+- Base model tokenizer fertility: 2.538 tokens/word → Akan TTS tokenizer: 1.280 tokens/word (**49.5% reduction** on the eval set)
+- Eval loss 4.4285 / perplexity 83.81
+- Generation produces coherent Twi continuations; save → reload-from-adapter inference verified
+
+Next step is 2A2 (`Qwen/Qwen3-1.7B`).
 
 ### 14.4 Edge deployment
 
@@ -409,11 +415,11 @@ Phase 1 answered the tokenizer question. Phase 2 asks whether those gains transl
 
 **Goal:** Verify that fertility reduction translates into measurable downstream benefit — faster inference, lower perplexity, or better generation — not just a smaller token count.
 
-**Current status:** 2A1 scaffolding is implemented in-repo. The repo now contains:
+**Current status:** 2A1 is complete — the first real Colab/T4 QLoRA run executed end-to-end on `Qwen/Qwen3-0.6B` with the Akan TTS tokenizer (49.5% fertility reduction on the eval set, eval perplexity 83.81, coherent Twi generation, save/reload verified). The repo contains:
 
 - `akan_bpe/model_integration.py` for dataset prep, tokenizer/model loading, token-count comparison, LoRA/QLoRA setup, eval, generation samples, and JSON artifact creation
 - `scripts/model_integration.py` for one CLI-driven experiment run
-- `phase2a_qwen3_tts_colab.ipynb` for the first real Colab GPU run
+- `phase2a_qwen3_tts_colab.ipynb` — the executed Colab run (outputs preserved in-notebook; `results/` is gitignored)
 - `tests/test_model_integration.py` for CPU-safe orchestration and artifact-contract coverage
 
 **Hardware baseline:** Free Kaggle/Colab GPU, typically T4/P100-class. Train and evaluate the smaller models first; treat larger models as QLoRA-only or reference-only unless paid GPU access is available.
@@ -422,7 +428,7 @@ Phase 1 answered the tokenizer question. Phase 2 asks whether those gains transl
 
 | Phase | Model | Role | Free-GPU feasibility |
 |---|---|---|---|
-| **2A1** | `Qwen/Qwen3-0.6B` | First real Colab/T4 QLoRA run: tokenizer replacement, embedding resize, train/eval, generation, save/load verification | Feasible |
+| **2A1 ✅** | `Qwen/Qwen3-0.6B` | First real Colab/T4 QLoRA run: tokenizer replacement, embedding resize, train/eval, generation, save/load verification — **done** (49.5% fertility reduction, perplexity 83.81) | Feasible — completed |
 | **2A2** | `Qwen/Qwen3-1.7B` | Main small-model experiment after 2A1 proves the path | Feasible with LoRA/QLoRA |
 | **2A3** | `google/gemma-3-1b-*` | Broad multilingual vendor/architecture comparison | Feasible; check Gemma license and PT/IT choice |
 | **2A4** | `meta-llama/Llama-3.2-1B` or `meta-llama/Llama-3.2-3B` | Deployment ecosystem comparison | 1B feasible; 3B QLoRA with conservative settings |
@@ -464,6 +470,28 @@ Phase 1 answered the tokenizer question. Phase 2 asks whether those gains transl
 **Success criterion:** Fine-tuned model with new tokenizer matches or exceeds base model perplexity on Akan test text, with fewer tokens processed per sample.
 
 **Failure mode to watch for:** If perplexity is significantly worse after embedding resize, the initialization strategy needs work (e.g., averaging subword embeddings from the original vocab that cover similar character sequences).
+
+#### 16.1.1 Phase 2A2 — next actions (`Qwen/Qwen3-1.7B`)
+
+The 2A1 path is proven, so 2A2 is mostly a configuration change on the same machinery.
+Concrete steps:
+
+1. **Extend the QLoRA allowlist.** `colab-qlora` mode is intentionally pinned to one
+   model: `SUPPORTED_COLAB_QLORA_MODEL_IDS = ("Qwen/Qwen3-0.6B",)` in
+   `akan_bpe/model_integration.py`. Add `"Qwen/Qwen3-1.7B"` there (and update
+   `validate_colab_qlora_config` coverage in `tests/test_model_integration.py`).
+2. **Clone the notebook.** Copy `phase2a_qwen3_tts_colab.ipynb` to a 2A2 variant and
+   point `--model-id` at `Qwen/Qwen3-1.7B`; keep the TTS tokenizer and dataset paths.
+   1.7B in 4-bit fits a free T4 but may need a smaller `--batch-size` / higher
+   `--grad-accum` than 2A1.
+3. **Compare against 2A1.** Record the same metrics (fertility reduction, eval
+   perplexity, generation quality) so 2A1 vs 2A2 is an apples-to-apples ladder step.
+
+**Known limitation carried into Phase 2:** the ASR test split is effectively a single
+sample (see §5 / `report.md` §2.1), so any ASR-side evaluation is anecdotal. If ASR
+becomes a model-integration target (vs the current TTS focus), regenerate a real ASR
+test split first via `scripts/download.py` (the `_split_rows` 80/10/10 logic already
+exists; the current tiny split is a stale-download artifact, not a code bug).
 
 ---
 
@@ -507,8 +535,8 @@ Phase 1 answered the tokenizer question. Phase 2 asks whether those gains transl
 ```
 Phase 1 (DONE)
     └── Phase 2A: Model Integration
-            ├── 2A1 Qwen3-0.6B pipeline smoke test
-            ├── 2A2 Qwen3-1.7B main small-model experiment
+            ├── 2A1 Qwen3-0.6B first Colab/T4 QLoRA run (DONE)
+            ├── 2A2 Qwen3-1.7B main small-model experiment (NEXT)
             ├── 2A3 Gemma 3 1B multilingual comparison
             ├── 2A4 Llama 3.2 1B/3B deployment comparison
             ├── 2A5 Tiny Aya Earth Africa-focused QLoRA experiment

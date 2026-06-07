@@ -8,13 +8,15 @@
 ## Overview
 
 Modern LLM tokenizers are optimized for English, resulting in a **Tokenization Tax**
-for languages like Akan. Akan-BPE completed the tokenizer-only phase and now has
-the first Phase 2A scaffold in place:
+for languages like Akan. Akan-BPE completed the tokenizer-only phase and has now
+landed its first Phase 2A model-integration run:
 
 - normalize Akan ASR and formal-text datasets
 - train tokenizer variants for `asr`, `tts`, and `mixed`
 - compare them against multilingual baselines (XLM-R, mBERT, mT5) in one unified fertility experiment JSON
-- run the first model-integration path for `Qwen/Qwen3-0.6B` with the Akan TTS tokenizer
+- fine-tune `Qwen/Qwen3-0.6B` with the Akan TTS tokenizer via QLoRA on Colab/T4
+  (Phase 2A1, completed): **49.5% fewer tokens/word** than the base tokenizer on the
+  eval set, eval perplexity **83.81**, coherent Twi generation
 
 ## Data Sources
 
@@ -168,7 +170,6 @@ The model-integration JSON contains:
 ```text
 Akan-BPE/
 ├── data/                  # Akan datasets (gitignored)
-│   └── akan/              # Raw ASR downloads
 ├── models/                # Tokenizer + classifier artifacts (gitignored)
 ├── results/               # Experiment outputs (gitignored)
 ├── config/                # Router configuration
@@ -208,8 +209,33 @@ Akan-BPE/
 - [x] Fix mixed tokenizer corpus imbalance (balanced upsampling)
 - [x] Add held-out test evaluation to router classifier
 - [x] Add 2A1 model-integration scaffold and Colab notebook
-- [ ] Model integration (resize vocab, test generation)
+- [x] Phase 2A1: Qwen3-0.6B QLoRA fine-tune with Akan TTS tokenizer on Colab/T4 (49.5% fertility reduction, perplexity 83.81)
+- [ ] Phase 2A2: Qwen3-1.7B main small-model experiment
 - [ ] Edge deployment (benchmark on hardware)
+
+### Next up: Phase 2A2 (`Qwen/Qwen3-1.7B`)
+
+The 2A1 path is proven, so 2A2 is mostly a config change on the same machinery:
+
+1. Add `"Qwen/Qwen3-1.7B"` to `SUPPORTED_COLAB_QLORA_MODEL_IDS` in
+   `akan_bpe/model_integration.py` (the `colab-qlora` allowlist is currently pinned to
+   Qwen3-0.6B) and extend the matching test in `tests/test_model_integration.py`.
+2. Clone `phase2a_qwen3_tts_colab.ipynb`, point `--model-id` at `Qwen/Qwen3-1.7B`, and
+   keep the TTS tokenizer. 1.7B in 4-bit fits a free T4 but may need a smaller
+   `--batch-size` / larger `--grad-accum` than 2A1.
+3. Record the same metrics so 2A1 vs 2A2 is an apples-to-apples comparison.
+
+See `project.md` §16.1.1 for the full checklist.
+
+## Notes & Limitations
+
+- **Scripts require the dev install.** `scripts/*.py` import `python-dotenv` and the
+  `akan_bpe` package, so run `pip install -e ".[dev]"` (add `,train` for model
+  integration) before invoking them — a bare interpreter will fail on import.
+- **The ASR test split is a single sample.** It is a stale-download artifact, not a code
+  bug; ASR-test fertility numbers are therefore anecdotal. Regenerate a proper ASR test
+  split with `scripts/download.py` before relying on ASR-side evaluation. The formal
+  (TTS) test set (2,500 samples) carries the statistical weight.
 
 ## License
 

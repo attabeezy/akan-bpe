@@ -500,7 +500,7 @@ Phase 2A1 is complete. The first real Colab QLoRA run executed end-to-end. The r
 
 - `akan_bpe/model_integration.py` — dataset prep, tokenizer/model loading, token-count comparison, LoRA/QLoRA setup, eval, generation samples, JSON artifact creation
 - `scripts/model_integration.py` — CLI-driven experiment runner
-- `notebooks/phase2a_qwen3_tts_colab.ipynb` — executed Colab/T4 run for `Qwen/Qwen3-0.6B` (outputs preserved in the notebook)
+- `notebooks/2a1_qwen3-0.6b_tts.ipynb` — executed Colab/T4 run for `Qwen/Qwen3-0.6B` (outputs preserved in the notebook)
 - `tests/test_model_integration.py` — CPU-safe orchestration and artifact-contract coverage
 
 **2A1 result (Qwen3-0.6B + Akan TTS tokenizer, QLoRA 4-bit nf4, Tesla T4, 1 epoch):**
@@ -557,7 +557,7 @@ Phase 1 answered the tokenizer question. Phase 2 asks whether those gains transl
 
 - `akan_bpe/model_integration.py` for dataset prep, tokenizer/model loading, token-count comparison, LoRA/QLoRA setup, eval, generation samples, and JSON artifact creation
 - `scripts/model_integration.py` for one CLI-driven experiment run
-- `notebooks/phase2a_qwen3_tts_colab.ipynb` — the executed Colab run (outputs preserved in-notebook; `results/` is gitignored)
+- `notebooks/2a1_qwen3-0.6b_tts.ipynb` — the executed Colab run (outputs preserved in-notebook; `results/` is gitignored)
 - `tests/test_model_integration.py` for CPU-safe orchestration and artifact-contract coverage
 
 **Hardware baseline:** Free Kaggle/Colab GPU, typically T4/P100-class. Train and evaluate the smaller models first; treat larger models as QLoRA-only or reference-only unless paid GPU access is available.
@@ -611,7 +611,7 @@ aya-expanse-8b) is deferred to future work.
 
 6. **Record experiment output** — save one structured JSON per run under `results/`, including model ID, tokenizer path, dataset paths, fertility, perplexity, generation samples, timing, hardware, and memory notes.
 
-**First real run path:** Use `notebooks/phase2a_qwen3_tts_colab.ipynb` to install `.[dev,train]` plus `bitsandbytes`, verify `data/pristine_twi_train.jsonl`, `data/pristine_twi_test.jsonl`, and `models/tts_tokenizer.json`, then call `scripts/model_integration.py` in `colab-qlora` mode.
+**First real run path:** Use `notebooks/2a1_qwen3-0.6b_tts.ipynb` to install `.[dev,train]` plus `bitsandbytes`, verify `data/pristine_twi_train.jsonl`, `data/pristine_twi_test.jsonl`, and `models/tts_tokenizer.json`, then call `scripts/model_integration.py` in `colab-qlora` mode.
 
 **Success criterion:** Fine-tuned model with new tokenizer matches or exceeds base model perplexity on Akan test text, with fewer tokens processed per sample.
 
@@ -630,7 +630,7 @@ Concrete steps:
    model: `SUPPORTED_COLAB_QLORA_MODEL_IDS = ("Qwen/Qwen3-0.6B",)` in
    `akan_bpe/model_integration.py`. Add `"Qwen/Qwen3-1.7B"` there (and update
    `validate_colab_qlora_config` coverage in `tests/test_model_integration.py`).
-2. **Clone the notebook.** Copy `notebooks/phase2a_qwen3_tts_colab.ipynb` to a 2A2 variant and
+2. **Clone the notebook.** Copy `notebooks/2a1_qwen3-0.6b_tts.ipynb` to a 2A2 variant and
    point `--model-id` at `Qwen/Qwen3-1.7B`; keep the TTS tokenizer and dataset paths.
    1.7B in 4-bit fits a free T4 but may need a smaller `--batch-size` / higher
    `--grad-accum` than 2A1.

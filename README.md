@@ -183,7 +183,7 @@ Akan-BPE/
 ├── tests/
 ├── notebooks/
 │   ├── train_eval.ipynb              # End-to-end walkthrough
-│   └── phase2a_qwen3_tts_colab.ipynb
+│   └── 2a1_qwen3-0.6b_tts.ipynb
 ├── report.md              # Technical report
 ├── project.md             # Full project reference & paper plan
 ├── pyproject.toml

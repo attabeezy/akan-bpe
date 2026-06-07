@@ -3,9 +3,136 @@
 
 **Status:** Phase 2A In Progress (v0.2.0) — 2A1 complete (first Colab QLoRA run); 2A2 next  
 **Scope:** Akan (Twi), tokenizer experiments with ML routing  
+**Paper target:** AfricaNLP / WiNLP workshop (4–8 pages). The active plan is now driven by
+this submission — see §0 (Research Design & Road to Paper) for the locked decisions and the
+milestone road. §0 takes precedence where it tightens or narrows the longer Phase 2 plan below.  
 **Completed:** Tokenizer training, fertility benchmarks vs multilingual baselines, balanced mixed tokenizer, router with held-out eval, first model-integration run (Qwen3-0.6B + Akan TTS tokenizer on Colab/T4)  
 **Current hardware:** CPU (local) / Colab T4 (model integration)  
 **Next hardware:** Continued Colab/Kaggle GPU for the model ladder; Dell Latitude 7400 for edge deployment
+
+---
+
+## 0. Research Design & Road to Paper (Current Plan)
+
+This section is the authoritative current plan. The detailed Phase 2 material in §16 remains
+as background, but where it conflicts with §0 (e.g., the full six-model ladder, perplexity-only
+eval, edge deployment as a hard prerequisite), **§0 wins**.
+
+### 0.1 Locked decisions
+
+| Decision | Choice |
+|---|---|
+| **Venue / scope** | AfricaNLP / WiNLP workshop, 4–8 pages |
+| **Downstream evidence** | Bits-per-byte (BPB) **plus** generation quality (chrF) |
+| **ASR scope** | Keep the dual-regime (ASR + TTS) story; **fix the ASR test split** first |
+| **Model evidence** | **5 runs across 4 model families + a scale step** (see §0.3 M3) — not the full 2A1–2A6 ladder |
+| **Edge deployment (2B)** | Optional for the paper; a light latency note if cheap, otherwise future work |
+
+### 0.2 Thesis
+
+> Specialized BPE tokenizers eliminate the tokenization tax for Akan, and this gain
+> survives transfer into a real LLM — yielding a more efficient, deployable model —
+> across model scales and families.
+
+Phase 1 supports clause 1 (intrinsic fertility). Phase 2A supports clause 2 (the gain holds
+inside a model, measured fairly). A light edge/latency note grounds "efficient/deployable."
+
+### 0.3 The road — 5 milestones
+
+**M1 — Lock the design (done).** Thesis, claims, metrics, venue/scope above.
+
+**M2 — Methodology hardening (do *before* more model runs).** In priority order:
+1. **Bits-per-byte (BPB).** Perplexity is **not** comparable across tokenizers with different
+   vocabularies. Replace the cross-tokenizer perplexity comparison in
+   `akan_bpe/model_integration.py` with BPB (or bits-per-character) so base-tokenizer vs
+   Akan-tokenizer is honest. Keep fertility as the intrinsic metric. *This is the single
+   highest-leverage fix — land it before 2A2 or every model run must be redone.*
+2. **Embedding-init ablation** — random vs mean-of-subword initialization for the resized
+   embeddings. This is the modeling contribution (see §16.1 failure mode).
+3. **Regenerate the ASR test split** via `scripts/download.py` (the 80/10/10 `_split_rows`
+   logic already exists; the current 1-sample split is a stale-download artifact). Re-run the
+   Phase 1 fertility benchmark on the fixed split so the dual-regime table is valid. CPU-only.
+
+**M3 — Model evidence (5 runs).** Chosen to support both the **scale** and the **family**
+clauses of the thesis, and to span base-vocab size and pretraining multilinguality. Selection
+criteria (defensible in the paper): (1) QLoRA-feasible on a free T4 for reproducibility;
+(2) standard causal-LM pipeline so the swap+resize method is the controlled variable;
+(3) spans scale within a family and ≥3 families across; (4) diverse base-vocab sizes;
+(5) a multilinguality spread from English-centric to Africa-purpose-built; (6) license
+transparency.
+
+| # | Model | Params | ~Base vocab | Axis / why it's in | License |
+|---|---|---|---|---|---|
+| **2A1 ✅** | `Qwen/Qwen3-0.6B` | 0.6B | ~151k | Scale anchor (low); proven path | Apache-2.0 |
+| **2A2** | `Qwen/Qwen3-1.7B` | 1.7B | ~151k | Scale anchor (high) — **isolates scale**, family held constant | Apache-2.0 |
+| **2A3** | `google/gemma-3-1b-pt` | ~1B | ~256k | Multilingual + largest base vocab → tax survives *even* a 256k vocab | Gemma (gated) |
+| **2A4** | `meta-llama/Llama-3.2-1B` | ~1.2B | ~128k | English-centric → biggest tax/gain; deployment-standard, seeds Phase 2B | Llama (gated) |
+| **2A5** | `CohereLabs/tiny-aya-base` | 3.35B | TBD* | Africa-aware multilingual pretraining → does the gain hold *even here?* + GGUF edge tie-in | CC-BY-NC |
+
+`*` Aya base-vocab size is not on the model card — **read it from the config before citing.**
+
+What the set buys, in reviewer terms:
+- **Scale axis:** Qwen3 0.6B → 1.7B (one variable changed).
+- **Family axis:** 4 distinct families (Qwen, Gemma, Llama, Cohere/Aya) → kills the "Qwen quirk" objection.
+- **Base-vocab spread:** 128k / 151k / 256k / TBD → the tax isn't an artifact of one vocab size.
+- **Multilinguality spread:** weak (Llama) → moderate (Qwen) → strong (Gemma) → Africa-built (Aya).
+  The headline line: *the weaker a model's native Akan support, the more our tokenizer helps —
+  and it still helps even the strongest.*
+
+**Why `tiny-aya-base`, not `-earth`:** the other four are base/pretrained models; `tiny-aya-earth`
+is instruction-tuned + preference-aligned, which would confound a tokenizer-swap + embedding
+retrain. `tiny-aya-base` shares the same Africa-aware multilingual pretraining without the SFT
+confound, keeping the comparison apples-to-apples.
+
+**Per-run reporting:** fertility reduction, **BPB** (base vs Akan tokenizer), and generation
+samples. ≥2 seeds where T4 budget allows; single-seed is an acceptable, stated limitation at
+workshop tier. Both ASR and TTS tokenizers are evaluated now that the ASR split is real.
+
+**Run order — cheapest/safest first, so results bank before the risky run:**
+2A2 (config clone of 2A1) → 2A3 Gemma → 2A4 Llama → **2A5 Aya last** (heaviest at 3.35B *and*
+a custom Cohere architecture; its LoRA target-module names and the `colab-qlora` allowlist need
+a model-specific check — budget engineering time, it is not a config-only clone). If T4 time or
+the Aya integration bites, a complete 4-run paper still stands.
+
+**M4 — Generation quality.** **chrF** (preferred over BLEU for morphologically rich,
+low-resource languages) on held-out Twi continuations, base-tokenizer vs Akan-tokenizer model.
+Optional small qualitative rubric for the appendix. Decide the exact generation/eval protocol
+during M2 so M4 is unambiguous (needs clear held-out references).
+
+**M5 — Write & submit.** `report.md` → paper skeleton. Intro (tokenization tax) · Related work
+(low-resource tokenization, African NLP) · Method (specialized BPE + tokenizer swap + embedding
+init) · Results (fertility, BPB, chrF, routing) · Discussion/limitations · Future work (full
+ladder + edge + cross-lingual). Figures from existing result JSON; code release largely ready.
+
+### 0.4 Critical path
+
+```
+M2 (BPB + ASR split fix)  ← before any new model run, or they get redone
+        ↓
+M3 (5 runs: Qwen3-0.6B✅ + Qwen3-1.7B + Gemma-3-1B + Llama-3.2-1B + tiny-aya-base, in BPB)
+        ↓
+M4 (chrF generation quality)
+        ↓
+M5 (write)
+```
+
+### 0.5 Explicitly deferred to future work (not in the paper)
+
+- The 2A6 stretch/reference tier: `microsoft/Phi-4-mini-instruct` (off-thesis, code/English-heavy,
+  QLoRA-stretch on a T4) and `CohereLabs/aya-expanse-8b` (8B + non-commercial, reference-only)
+- Phase 2B edge deployment as a full benchmark suite (Dell Latitude 7400)
+- Cross-lingual transfer, additional Akan domains, labeled-task (QA/instruction) evaluation
+
+### 0.6 Open items to pin before building
+
+- **CFP deadline.** AfricaNLP/WiNLP are co-located workshops; pin the actual deadline so
+  M3/M4 are budgeted against a real date.
+- **Generation eval protocol.** Confirm held-out Twi references and the exact chrF scoring
+  setup during M2 so M4 is not ambiguous.
+- **Aya config facts.** Read `tiny-aya-base`'s vocab size, hidden size, tied-embeddings flag, and
+  LoRA target-module names from its config before it goes in any table or the `colab-qlora` path.
+- **Gated-model access.** Gemma and Llama are gated on Hugging Face — accept their licenses and
+  set up an HF token before the 2A3/2A4 runs.
 
 ---
 
@@ -38,9 +165,11 @@ The active scope is tokenizer + routing experiments.
 - Heuristic router implementation
 - ML classifier router (99.99% train/test accuracy on stratified held-out split)
 
-**In progress / next phases:**
-- Model integration — 2A1 complete: Qwen3-0.6B QLoRA fine-tune with the Akan TTS tokenizer on Colab/T4 (49.5% fertility reduction, eval perplexity 83.81, coherent Twi generation). 2A2 (Qwen3-1.7B) is next.
-- Edge deployment (GGUF export, Dell Latitude 7400 benchmarking) — blocked on a usable Phase 2A model artifact
+**In progress / next phases (per the §0 paper plan):**
+- Methodology hardening (M2) — add bits-per-byte eval, embedding-init ablation, fix the ASR test split. **Do before more model runs.**
+- Model integration (M3) — 2A1 complete: Qwen3-0.6B QLoRA fine-tune with the Akan TTS tokenizer on Colab/T4 (49.5% fertility reduction, coherent Twi generation). Next: a 5-run set — Qwen3-1.7B, Gemma-3-1B, Llama-3.2-1B, and tiny-aya-base — reported in BPB (see §0.3 M3).
+- Generation quality (M4) — chrF on held-out Twi continuations.
+- Edge deployment — optional for the paper (light latency note if cheap); full GGUF + Dell Latitude 7400 benchmarking is deferred to future work.
 
 ---
 
@@ -362,7 +491,7 @@ Phase 2A1 is complete. The first real Colab QLoRA run executed end-to-end. The r
 
 - `akan_bpe/model_integration.py` — dataset prep, tokenizer/model loading, token-count comparison, LoRA/QLoRA setup, eval, generation samples, JSON artifact creation
 - `scripts/model_integration.py` — CLI-driven experiment runner
-- `phase2a_qwen3_tts_colab.ipynb` — executed Colab/T4 run for `Qwen/Qwen3-0.6B` (outputs preserved in the notebook)
+- `notebooks/phase2a_qwen3_tts_colab.ipynb` — executed Colab/T4 run for `Qwen/Qwen3-0.6B` (outputs preserved in the notebook)
 - `tests/test_model_integration.py` — CPU-safe orchestration and artifact-contract coverage
 
 **2A1 result (Qwen3-0.6B + Akan TTS tokenizer, QLoRA 4-bit nf4, Tesla T4, 1 epoch):**
@@ -401,7 +530,7 @@ This should only happen after the tokenizer question is clearly answered.
 4. ✅ unified experiment JSON with fertility comparison
 5. ✅ technical report (report.md) documenting findings
 6. ✅ ML classifier router (99.99% train/test accuracy, stratified held-out eval)
-7. ✅ End-to-end notebook (train_eval.ipynb)
+7. ✅ End-to-end notebook (notebooks/train_eval.ipynb)
 
 **Conclusion:** Specialization is real — ASR tokenizer achieves ~52% fertility reduction, TTS ~47%, both vs best multilingual baseline (mBERT). Balanced mixed tokenizer interpolates between domains (1.20 ASR, 1.27 TTS) and is viable where routing infrastructure is unavailable.
 
@@ -419,12 +548,16 @@ Phase 1 answered the tokenizer question. Phase 2 asks whether those gains transl
 
 - `akan_bpe/model_integration.py` for dataset prep, tokenizer/model loading, token-count comparison, LoRA/QLoRA setup, eval, generation samples, and JSON artifact creation
 - `scripts/model_integration.py` for one CLI-driven experiment run
-- `phase2a_qwen3_tts_colab.ipynb` — the executed Colab run (outputs preserved in-notebook; `results/` is gitignored)
+- `notebooks/phase2a_qwen3_tts_colab.ipynb` — the executed Colab run (outputs preserved in-notebook; `results/` is gitignored)
 - `tests/test_model_integration.py` for CPU-safe orchestration and artifact-contract coverage
 
 **Hardware baseline:** Free Kaggle/Colab GPU, typically T4/P100-class. Train and evaluate the smaller models first; treat larger models as QLoRA-only or reference-only unless paid GPU access is available.
 
-**Model ladder:**
+**Model ladder (background — see §0.3 M3 for the authoritative paper set):** The paper runs a
+**5-model set** — Qwen3-0.6B, Qwen3-1.7B, Gemma-3-1B, Llama-3.2-1B, and tiny-aya-base — chosen
+to span scale, family, base-vocab size, and multilinguality. The original six-rung ladder below
+remains as a longer-term map; only the **2A6 stretch/reference tier** (Phi-4-mini,
+aya-expanse-8b) is deferred to future work.
 
 | Phase | Model | Role | Free-GPU feasibility |
 |---|---|---|---|
@@ -459,17 +592,25 @@ Phase 1 answered the tokenizer question. Phase 2 asks whether those gains transl
    - Rank: r=8 or r=16 to start
 
 5. **Evaluate**
-   - **Perplexity** on `pristine_twi_test.jsonl` — compare base model (original tokenizer) vs fine-tuned (new tokenizer)
-   - **Generation quality** — BLEU or chrF on a small Akan reference set if available; otherwise qualitative review
+   - **Bits-per-byte (BPB)** on `pristine_twi_test.jsonl` — compare base model (original
+     tokenizer) vs fine-tuned (new tokenizer). **Use BPB, not raw perplexity:** perplexity is
+     not comparable across tokenizers with different vocabularies, so the cross-tokenizer
+     claim must rest on a tokenizer-agnostic metric (see §0.3 M2.1).
+   - **Generation quality** — **chrF** (preferred over BLEU for morphologically rich,
+     low-resource Akan) on held-out Twi continuations; small qualitative rubric as backup.
    - **Inference speed** — tokens/second before and after to quantify the fertility gain in practice
 
 6. **Record experiment output** — save one structured JSON per run under `results/`, including model ID, tokenizer path, dataset paths, fertility, perplexity, generation samples, timing, hardware, and memory notes.
 
-**First real run path:** Use `phase2a_qwen3_tts_colab.ipynb` to install `.[dev,train]` plus `bitsandbytes`, verify `data/pristine_twi_train.jsonl`, `data/pristine_twi_test.jsonl`, and `models/tts_tokenizer.json`, then call `scripts/model_integration.py` in `colab-qlora` mode.
+**First real run path:** Use `notebooks/phase2a_qwen3_tts_colab.ipynb` to install `.[dev,train]` plus `bitsandbytes`, verify `data/pristine_twi_train.jsonl`, `data/pristine_twi_test.jsonl`, and `models/tts_tokenizer.json`, then call `scripts/model_integration.py` in `colab-qlora` mode.
 
 **Success criterion:** Fine-tuned model with new tokenizer matches or exceeds base model perplexity on Akan test text, with fewer tokens processed per sample.
 
-**Failure mode to watch for:** If perplexity is significantly worse after embedding resize, the initialization strategy needs work (e.g., averaging subword embeddings from the original vocab that cover similar character sequences).
+**Failure mode to watch for:** If BPB is significantly worse after embedding resize, the
+initialization strategy needs work (e.g., averaging subword embeddings from the original vocab
+that cover similar character sequences). For the paper this is promoted to a deliberate
+**embedding-init ablation** (random vs mean-of-subword) — see §0.3 M2.2 — and is the modeling
+contribution rather than just a risk to monitor.
 
 #### 16.1.1 Phase 2A2 — next actions (`Qwen/Qwen3-1.7B`)
 
@@ -480,22 +621,28 @@ Concrete steps:
    model: `SUPPORTED_COLAB_QLORA_MODEL_IDS = ("Qwen/Qwen3-0.6B",)` in
    `akan_bpe/model_integration.py`. Add `"Qwen/Qwen3-1.7B"` there (and update
    `validate_colab_qlora_config` coverage in `tests/test_model_integration.py`).
-2. **Clone the notebook.** Copy `phase2a_qwen3_tts_colab.ipynb` to a 2A2 variant and
+2. **Clone the notebook.** Copy `notebooks/phase2a_qwen3_tts_colab.ipynb` to a 2A2 variant and
    point `--model-id` at `Qwen/Qwen3-1.7B`; keep the TTS tokenizer and dataset paths.
    1.7B in 4-bit fits a free T4 but may need a smaller `--batch-size` / higher
    `--grad-accum` than 2A1.
 3. **Compare against 2A1.** Record the same metrics (fertility reduction, eval
    perplexity, generation quality) so 2A1 vs 2A2 is an apples-to-apples ladder step.
 
-**Known limitation carried into Phase 2:** the ASR test split is effectively a single
-sample (see §5 / `report.md` §2.1), so any ASR-side evaluation is anecdotal. If ASR
-becomes a model-integration target (vs the current TTS focus), regenerate a real ASR
-test split first via `scripts/download.py` (the `_split_rows` 80/10/10 logic already
-exists; the current tiny split is a stale-download artifact, not a code bug).
+**ASR test split — now an in-scope M2 fix, not a deferred caveat.** The paper keeps the
+dual-regime (ASR + TTS) story, so the effectively-single-sample ASR test split (see §5 /
+`report.md` §2.1) **must** be regenerated before the model runs. Run `scripts/download.py`
+(the `_split_rows` 80/10/10 logic already exists; the current tiny split is a stale-download
+artifact, not a code bug), then re-run the Phase 1 fertility benchmark on the fixed split. See
+§0.3 M2.3.
 
 ---
 
 ### 16.2 Edge Deployment
+
+> **Paper scope note (see §0.1):** Full edge benchmarking is **optional for the workshop
+> paper** and otherwise deferred to future work. For the submission, fold in at most a light
+> latency / tokens-per-second note if it is cheap to obtain. The full suite below is the
+> longer-term plan.
 
 **Goal:** Benchmark tokenizer + router + model on the Dell Latitude 7400 to understand real-world latency and memory footprint.
 
@@ -532,21 +679,28 @@ exists; the current tiny split is a stale-download artifact, not a code bug).
 
 ### 16.3 Sequencing
 
+Paper critical path (authoritative — see §0.3/§0.4):
+
 ```
 Phase 1 (DONE)
-    └── Phase 2A: Model Integration
-            ├── 2A1 Qwen3-0.6B first Colab/T4 QLoRA run (DONE)
-            ├── 2A2 Qwen3-1.7B main small-model experiment (NEXT)
-            ├── 2A3 Gemma 3 1B multilingual comparison
-            ├── 2A4 Llama 3.2 1B/3B deployment comparison
-            ├── 2A5 Tiny Aya Earth Africa-focused QLoRA experiment
-            ├── 2A6 Phi/Aya Expanse stretch/reference tier
-            ├── Resize + LoRA/QLoRA fine-tune on TTS data
-            ├── Eval fertility, perplexity, generation quality, timing
-            └── Phase 2B: Edge Deployment
-                    ├── GGUF export
-                    ├── Bundle router
-                    └── Benchmark on Dell Latitude 7400
+    └── M2 Methodology hardening
+    │       ├── BPB metric (before any new model run)
+    │       ├── Embedding-init ablation (random vs mean-of-subword)
+    │       └── Fix ASR test split + re-run Phase 1 fertility benchmark
+    └── M3 Model evidence (5 runs, reported in BPB; run cheapest/safest first)
+    │       ├── 2A1 Qwen3-0.6B (DONE)
+    │       ├── 2A2 Qwen3-1.7B (NEXT — scale step, config clone)
+    │       ├── 2A3 Gemma-3-1B (multilingual, 256k vocab)
+    │       ├── 2A4 Llama-3.2-1B (English-centric, deployment-standard)
+    │       └── 2A5 tiny-aya-base (Africa-aware, 3.35B — run last, custom arch)
+    └── M4 Generation quality (chrF on held-out Twi)
+    └── M5 Write & submit (AfricaNLP/WiNLP)
+
+Deferred to future work:
+    ├── 2A6 stretch/reference tier (Phi-4-mini, aya-expanse-8b)
+    └── Phase 2B edge deployment (full GGUF + Dell Latitude 7400 suite)
 ```
 
-Phase 2B is blocked on Phase 2A. Do not start edge deployment until there is a working fine-tuned model artifact to benchmark.
+Longer-term map (background): the full Phase 2A ladder runs 2A1→2A6, followed by Phase 2B
+(GGUF export, bundle router, benchmark on Dell Latitude 7400). Phase 2B is blocked on a working
+fine-tuned model artifact; for the paper it is optional/future per §16.2.

@@ -16,7 +16,8 @@ landed its first Phase 2A model-integration run:
 - compare them against multilingual baselines (XLM-R, mBERT, mT5) in one unified fertility experiment JSON
 - fine-tune `Qwen/Qwen3-0.6B` with the Akan TTS tokenizer via QLoRA on Colab/T4
   (Phase 2A1, completed): **49.5% fewer tokens/word** than the base tokenizer on the
-  eval set, eval perplexity **83.81**, coherent Twi generation
+  eval set, coherent Twi generation (cross-tokenizer modeling claim moves to bits-per-byte
+  from Phase 2A2 — see Roadmap)
 
 ## Data Sources
 
@@ -189,8 +190,9 @@ Akan-BPE/
 │   ├── io.py
 │   └── model_integration.py
 ├── tests/
-├── train_eval.ipynb       # End-to-end walkthrough
-├── phase2a_qwen3_tts_colab.ipynb
+├── notebooks/
+│   ├── train_eval.ipynb              # End-to-end walkthrough
+│   └── phase2a_qwen3_tts_colab.ipynb
 ├── report.md              # Technical report
 ├── pyproject.toml
 ├── Makefile
@@ -209,23 +211,38 @@ Akan-BPE/
 - [x] Fix mixed tokenizer corpus imbalance (balanced upsampling)
 - [x] Add held-out test evaluation to router classifier
 - [x] Add 2A1 model-integration scaffold and Colab notebook
-- [x] Phase 2A1: Qwen3-0.6B QLoRA fine-tune with Akan TTS tokenizer on Colab/T4 (49.5% fertility reduction, perplexity 83.81)
-- [ ] Phase 2A2: Qwen3-1.7B main small-model experiment
-- [ ] Edge deployment (benchmark on hardware)
+- [x] Phase 2A1: Qwen3-0.6B QLoRA fine-tune with Akan TTS tokenizer on Colab/T4 (49.5% fertility reduction)
+- [ ] **M2** methodology hardening: bits-per-byte (BPB) metric, embedding-init ablation, regenerated ASR test split
+- [ ] **M3** model evidence — 5 runs reported in BPB (span scale + family + base-vocab + multilinguality):
+  - [x] 2A1 `Qwen/Qwen3-0.6B` (scale anchor, low)
+  - [ ] 2A2 `Qwen/Qwen3-1.7B` (scale anchor, high)
+  - [ ] 2A3 `google/gemma-3-1b-pt` (multilingual, 256k vocab)
+  - [ ] 2A4 `meta-llama/Llama-3.2-1B` (English-centric, deployment-standard)
+  - [ ] 2A5 `CohereLabs/tiny-aya-base` (Africa-aware, 3.35B — run last; custom arch)
+- [ ] **M4** generation quality: chrF on held-out Twi
+- [ ] **M5** write & submit (AfricaNLP / WiNLP workshop)
+- [ ] _(future work)_ 2A6 stretch tier (Phi-4-mini, aya-expanse-8b), edge deployment benchmark on hardware
 
-### Next up: Phase 2A2 (`Qwen/Qwen3-1.7B`)
+This roadmap is driven by an **AfricaNLP / WiNLP workshop** submission. See `project.md` §0
+(Research Design & Road to Paper) for the locked decisions, milestones, and critical path.
 
-The 2A1 path is proven, so 2A2 is mostly a config change on the same machinery:
+### Next up: M2 — methodology hardening (before more model runs)
+
+The single highest-leverage item is **bits-per-byte (BPB)**: raw perplexity is not comparable
+across tokenizers with different vocabularies, so the cross-tokenizer claim needs a
+tokenizer-agnostic metric in `akan_bpe/model_integration.py`. Land BPB, the embedding-init
+ablation, and the regenerated ASR test split *before* running 2A2 — otherwise the model runs
+must be redone. Then proceed to Phase 2A2:
 
 1. Add `"Qwen/Qwen3-1.7B"` to `SUPPORTED_COLAB_QLORA_MODEL_IDS` in
    `akan_bpe/model_integration.py` (the `colab-qlora` allowlist is currently pinned to
    Qwen3-0.6B) and extend the matching test in `tests/test_model_integration.py`.
-2. Clone `phase2a_qwen3_tts_colab.ipynb`, point `--model-id` at `Qwen/Qwen3-1.7B`, and
+2. Clone `notebooks/phase2a_qwen3_tts_colab.ipynb`, point `--model-id` at `Qwen/Qwen3-1.7B`, and
    keep the TTS tokenizer. 1.7B in 4-bit fits a free T4 but may need a smaller
    `--batch-size` / larger `--grad-accum` than 2A1.
-3. Record the same metrics so 2A1 vs 2A2 is an apples-to-apples comparison.
+3. Record the same metrics (now including BPB) so 2A1 vs 2A2 is an apples-to-apples comparison.
 
-See `project.md` §16.1.1 for the full checklist.
+See `project.md` §0.3 and §16.1.1 for the full checklist.
 
 ## Notes & Limitations
 
@@ -233,9 +250,12 @@ See `project.md` §16.1.1 for the full checklist.
   `akan_bpe` package, so run `pip install -e ".[dev]"` (add `,train` for model
   integration) before invoking them — a bare interpreter will fail on import.
 - **The ASR test split is a single sample.** It is a stale-download artifact, not a code
-  bug; ASR-test fertility numbers are therefore anecdotal. Regenerate a proper ASR test
-  split with `scripts/download.py` before relying on ASR-side evaluation. The formal
-  (TTS) test set (2,500 samples) carries the statistical weight.
+  bug; ASR-test fertility numbers are therefore anecdotal. This is an **in-scope fix (M2)** for
+  the workshop paper, which keeps the dual-regime story: regenerate a proper ASR test split with
+  `scripts/download.py` and re-run the fertility benchmark before the model experiments. Until
+  then, the formal (TTS) test set (2,500 samples) carries the statistical weight.
+- **Cross-tokenizer perplexity is not comparable.** From Phase 2A2 onward the modeling claim
+  uses **bits-per-byte (BPB)** plus **chrF**, not raw perplexity across different tokenizers.
 
 ## License
 

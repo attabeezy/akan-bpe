@@ -176,7 +176,7 @@ The active scope is tokenizer + routing experiments.
 
 **In progress / next phases (per the §0 paper plan):**
 - Methodology hardening (M2) — add bits-per-byte eval, embedding-init ablation, fix the ASR test split. **Do before more model runs.**
-- Model integration (M3) — 2A1 complete: Qwen3-0.6B QLoRA fine-tune with the Akan TTS tokenizer on Colab/T4 (49.5% fertility reduction, coherent Twi generation). Next: a 5-run set — Qwen3-1.7B, Gemma-3-1B, Llama-3.2-1B, and tiny-aya-base — reported in BPB (see §0.3 M3).
+- Model integration (M3) — 2A1 complete: Qwen3-0.6B QLoRA fine-tune with the Akan TTS tokenizer on Colab/T4 (50.3% fertility reduction, coherent Twi generation). Next: a 5-run set — Qwen3-1.7B, Gemma-3-1B, Llama-3.2-1B, and tiny-aya-base — reported in BPB (see §0.3 M3).
 - Generation quality (M4) — chrF on held-out Twi continuations.
 - Edge deployment — optional for the paper (light latency note if cheap); full GGUF + Dell Latitude 7400 benchmarking is deferred to future work.
 
@@ -505,8 +505,8 @@ Phase 2A1 is complete. The first real Colab QLoRA run executed end-to-end. The r
 
 **2A1 result (Qwen3-0.6B + Akan TTS tokenizer, QLoRA 4-bit nf4, Tesla T4, 1 epoch):**
 
-- Base model tokenizer fertility: 2.538 tokens/word → Akan TTS tokenizer: 1.280 tokens/word (**49.5% reduction** on the eval set)
-- Eval loss 4.4285 / perplexity 83.81
+- Base model tokenizer fertility: 2.530 tokens/word → Akan TTS tokenizer: 1.259 tokens/word (**50.3% reduction** on the eval set)
+- Eval loss 4.4279 / perplexity 83.76
 - Generation produces coherent Twi continuations; save → reload-from-adapter inference verified
 
 Next step is 2A2 (`Qwen/Qwen3-1.7B`).
@@ -553,7 +553,7 @@ Phase 1 answered the tokenizer question. Phase 2 asks whether those gains transl
 
 **Goal:** Verify that fertility reduction translates into measurable downstream benefit — faster inference, lower perplexity, or better generation — not just a smaller token count.
 
-**Current status:** 2A1 is complete — the first real Colab/T4 QLoRA run executed end-to-end on `Qwen/Qwen3-0.6B` with the Akan TTS tokenizer (49.5% fertility reduction on the eval set, eval perplexity 83.81, coherent Twi generation, save/reload verified). The repo contains:
+**Current status:** 2A1 is complete — the first real Colab/T4 QLoRA run executed end-to-end on `Qwen/Qwen3-0.6B` with the Akan TTS tokenizer (50.3% fertility reduction on the eval set, eval perplexity 83.76, coherent Twi generation, save/reload verified). The repo contains:
 
 - `akan_bpe/model_integration.py` for dataset prep, tokenizer/model loading, token-count comparison, LoRA/QLoRA setup, eval, generation samples, and JSON artifact creation
 - `scripts/model_integration.py` for one CLI-driven experiment run
@@ -570,7 +570,7 @@ aya-expanse-8b) is deferred to future work.
 
 | Phase | Model | Role | Free-GPU feasibility |
 |---|---|---|---|
-| **2A1 ✅** | `Qwen/Qwen3-0.6B` | First real Colab/T4 QLoRA run: tokenizer replacement, embedding resize, train/eval, generation, save/load verification — **done** (49.5% fertility reduction, perplexity 83.81) | Feasible — completed |
+| **2A1 ✅** | `Qwen/Qwen3-0.6B` | First real Colab/T4 QLoRA run: tokenizer replacement, embedding resize, train/eval, generation, save/load verification — **done** (50.3% fertility reduction, perplexity 83.76) | Feasible — completed |
 | **2A2** | `Qwen/Qwen3-1.7B` | Main small-model experiment after 2A1 proves the path | Feasible with LoRA/QLoRA |
 | **2A3** | `google/gemma-3-1b-*` | Broad multilingual vendor/architecture comparison | Feasible; check Gemma license and PT/IT choice |
 | **2A4** | `meta-llama/Llama-3.2-1B` or `meta-llama/Llama-3.2-3B` | Deployment ecosystem comparison | 1B feasible; 3B QLoRA with conservative settings |

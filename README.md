@@ -15,7 +15,7 @@ landed its first Phase 2A model-integration run:
 - train tokenizer variants for `asr`, `tts`, and `mixed`
 - compare them against multilingual baselines (XLM-R, mBERT, mT5) in one unified fertility experiment JSON
 - fine-tune `Qwen/Qwen3-0.6B` with the Akan TTS tokenizer via QLoRA on Colab/T4
-  (Phase 2A1, completed): **49.5% fewer tokens/word** than the base tokenizer on the
+  (Phase 2A1, completed): **50.3% fewer tokens/word** than the base tokenizer on the
   eval set, with coherent Twi generation
 
 > **Looking for the full plan?** [`project.md`](project.md) is the authoritative
@@ -198,7 +198,7 @@ Akan-BPE/
 - [x] Fertility benchmark vs multilingual baselines (XLM-R, mBERT, mT5)
 - [x] Heuristic router + ML classifier router (held-out eval)
 - [x] Technical report (`report.md`)
-- [x] Phase 2A1: Qwen3-0.6B QLoRA fine-tune with Akan TTS tokenizer on Colab/T4 (49.5% fertility reduction)
+- [x] Phase 2A1: Qwen3-0.6B QLoRA fine-tune with Akan TTS tokenizer on Colab/T4 (50.3% fertility reduction)
 - [x] **M2** methodology hardening:
   - [x] bits-per-byte (BPB) metric — base vs experiment model on the same eval bytes (`akan_bpe/model_integration.py`)
   - [x] embedding-init ablation — `--embedding-init-mode {random,mean_subword}`

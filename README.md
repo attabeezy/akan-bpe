@@ -117,6 +117,15 @@ embedding resize, a forward/eval pass, and generation) that writes the result JS
 without full fine-tuning. `colab-qlora` is the explicit 2A1 path for `Qwen/Qwen3-0.6B`
 on Colab/T4: adapter training, eval, generation, save, and reload-for-inference verification.
 
+Both modes report **bits-per-byte (BPB)** for the base model and the fine-tuned model on
+the same eval bytes (`eval.bpb` in the result JSON) — a tokenizer-agnostic, honest
+cross-tokenizer comparison. Two extra flags control the M2 hardening:
+
+- `--embedding-init-mode {random,mean_subword}` — `mean_subword` initializes each Akan-vocab
+  embedding from the mean of the base model's subword embeddings for that token's surface
+  string (the modeling contribution; run `random` vs `mean_subword` as a clean A/B).
+- `--skip-base-bpb` — skip the extra base-model BPB pass when GPU memory is tight.
+
 ## Tokenizer Variants
 
 | Variant | Training Corpus | Purpose |
@@ -190,7 +199,10 @@ Akan-BPE/
 - [x] Heuristic router + ML classifier router (held-out eval)
 - [x] Technical report (`report.md`)
 - [x] Phase 2A1: Qwen3-0.6B QLoRA fine-tune with Akan TTS tokenizer on Colab/T4 (49.5% fertility reduction)
-- [ ] **M2** methodology hardening: bits-per-byte metric, embedding-init ablation, regenerated ASR test split
+- [x] **M2** methodology hardening:
+  - [x] bits-per-byte (BPB) metric — base vs experiment model on the same eval bytes (`akan_bpe/model_integration.py`)
+  - [x] embedding-init ablation — `--embedding-init-mode {random,mean_subword}`
+  - [x] regenerated ASR test split — full WaxalNLP stream re-split to 8,085/1,011/1,011 (was a 1-sample test); ASR + mixed tokenizers and router retrained, benchmark re-run; `scripts/download.py` now fails loudly on a truncated split
 - [ ] **M3** model evidence: 5 runs across families/scales (Qwen3-1.7B, Gemma-3-1B, Llama-3.2-1B, tiny-aya-base) reported in BPB
 - [ ] **M4** generation quality: chrF on held-out Twi
 - [ ] **M5** write & submit (AfricaNLP / WiNLP workshop)

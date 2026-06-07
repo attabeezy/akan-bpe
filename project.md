@@ -42,16 +42,25 @@ inside a model, measured fairly). A light edge/latency note grounds "efficient/d
 **M1 — Lock the design (done).** Thesis, claims, metrics, venue/scope above.
 
 **M2 — Methodology hardening (do *before* more model runs).** In priority order:
-1. **Bits-per-byte (BPB).** Perplexity is **not** comparable across tokenizers with different
-   vocabularies. Replace the cross-tokenizer perplexity comparison in
-   `akan_bpe/model_integration.py` with BPB (or bits-per-character) so base-tokenizer vs
-   Akan-tokenizer is honest. Keep fertility as the intrinsic metric. *This is the single
-   highest-leverage fix — land it before 2A2 or every model run must be redone.*
-2. **Embedding-init ablation** — random vs mean-of-subword initialization for the resized
-   embeddings. This is the modeling contribution (see §16.1 failure mode).
-3. **Regenerate the ASR test split** via `scripts/download.py` (the 80/10/10 `_split_rows`
-   logic already exists; the current 1-sample split is a stale-download artifact). Re-run the
-   Phase 1 fertility benchmark on the fixed split so the dual-regime table is valid. CPU-only.
+1. **Bits-per-byte (BPB). ✅ Implemented.** Perplexity is **not** comparable across tokenizers
+   with different vocabularies. `akan_bpe/model_integration.py` now computes BPB for **both** the
+   base model (original tokenizer) and the fine-tuned model (Akan tokenizer) on the same eval
+   bytes (`eval.bpb` in the result JSON), so the cross-tokenizer claim is honest. `--skip-base-bpb`
+   opts out of the second model load. Fertility is kept as the intrinsic metric; eval_loss/
+   perplexity remain as a within-tokenizer training signal. *Highest-leverage fix — landed before
+   2A2 so the model runs do not need redoing.*
+2. **Embedding-init ablation. ✅ Implemented.** `--embedding-init-mode {random,mean_subword}` on
+   the model-integration CLI; `mean_subword` initializes each Akan-vocab row from the mean of the
+   base model's subword embeddings for that token's surface string (the modeling contribution, see
+   §16.1 failure mode). Run `random` vs `mean_subword` as a clean A/B (one variable changed).
+3. **Regenerate the ASR test split. ✅ Done.** The stale single-sample test split (three ASR files
+   left over from different runs) was regenerated via `scripts/download.py` — which now **fails
+   loudly on a truncated split** (`_assert_healthy_split`). The full WaxalNLP `aka_asr` stream is
+   10,107 rows → a clean **8,085 / 1,011 / 1,011** 80/10/10 split. Because the ASR train set
+   changed, the ASR + mixed tokenizers and the router were retrained and the Phase 1 fertility
+   benchmark re-run on the fixed split. Updated headline: **~47% ASR / ~46% TTS** fertility
+   reduction vs the best multilingual baseline (was ~52%/~47% on the unreliable single sample). The
+   TTS corpus was untouched (pinned at 45,000/2,500/2,500).
 
 **M3 — Model evidence (5 runs).** Chosen to support both the **scale** and the **family**
 clauses of the thesis, and to span base-vocab size and pretraining multilinguality. Selection
@@ -160,7 +169,7 @@ The active scope is tokenizer + routing experiments.
 - Akan data collection and normalization (80/10/10 local split for ASR)
 - BPE tokenizer training (ASR, TTS, Mixed)
 - Tokenizer comparison against multilingual baselines (XLM-R, mBERT, mT5)
-- Token fertility benchmarking (~52% ASR reduction, ~47% TTS reduction vs best baseline)
+- Token fertility benchmarking (~47% ASR reduction, ~46% TTS reduction vs best baseline)
 - Balanced mixed tokenizer (corpus upsampling — now genuinely differentiates domains)
 - Heuristic router implementation
 - ML classifier router (99.99% train/test accuracy on stratified held-out split)
@@ -469,9 +478,9 @@ If phase 1 shows strong specialization effects, Akan-BPE can expand in carefully
 
 ### 14.1 Router / mux experiment (COMPLETED)
 
-- Implemented heuristic-based router (77.6% accuracy)
-- Trained ML classifier (TF-IDF + Logistic Regression, 99.99% train/test accuracy on stratified 80/20 split)
-- Per-class F1: ASR 0.9998, TTS 0.9999
+- Implemented heuristic-based router (77.6% on TTS test, 80.2% on ASR test)
+- Trained ML classifier (TF-IDF + Logistic Regression, 99.99% train/test accuracy on stratified 80/20 split of 53,085 samples)
+- Per-class F1: ASR 0.9997, TTS 0.9999
 - Benchmark showed ML router achieves optimal fertility (matches always-best-tokenizer strategy)
 
 **Status:** Complete - ML router significantly outperforms heuristic; accuracy confirmed on held-out test set
@@ -532,7 +541,7 @@ This should only happen after the tokenizer question is clearly answered.
 6. ✅ ML classifier router (99.99% train/test accuracy, stratified held-out eval)
 7. ✅ End-to-end notebook (notebooks/train_eval.ipynb)
 
-**Conclusion:** Specialization is real — ASR tokenizer achieves ~52% fertility reduction, TTS ~47%, both vs best multilingual baseline (mBERT). Balanced mixed tokenizer interpolates between domains (1.20 ASR, 1.27 TTS) and is viable where routing infrastructure is unavailable.
+**Conclusion:** Specialization is real — ASR tokenizer achieves ~47% fertility reduction (vs mT5), TTS ~46% (vs mBERT), both vs the best multilingual baseline, on the regenerated 1,011-sample ASR test set. Balanced mixed tokenizer interpolates between domains (1.297 ASR, 1.268 TTS) and is viable where routing infrastructure is unavailable.
 
 ---
 
@@ -628,12 +637,14 @@ Concrete steps:
 3. **Compare against 2A1.** Record the same metrics (fertility reduction, eval
    perplexity, generation quality) so 2A1 vs 2A2 is an apples-to-apples ladder step.
 
-**ASR test split — now an in-scope M2 fix, not a deferred caveat.** The paper keeps the
-dual-regime (ASR + TTS) story, so the effectively-single-sample ASR test split (see §5 /
-`report.md` §2.1) **must** be regenerated before the model runs. Run `scripts/download.py`
-(the `_split_rows` 80/10/10 logic already exists; the current tiny split is a stale-download
-artifact, not a code bug), then re-run the Phase 1 fertility benchmark on the fixed split. See
-§0.3 M2.3.
+**ASR test split — M2 fix, ✅ done.** The dual-regime (ASR + TTS) story is now statistically
+valid. The stale single-sample ASR test split (three files left over from different runs) was
+regenerated via `scripts/download.py`, which now guards against silent recurrence
+(`_assert_healthy_split` raises on a 1-row test split). The full WaxalNLP `aka_asr` stream is
+10,107 rows → a clean **8,085 / 1,011 / 1,011** 80/10/10 split. The ASR + mixed tokenizers and the
+router were retrained on the corrected train set and the Phase 1 fertility benchmark re-run; the
+TTS corpus was untouched (45,000/2,500/2,500). New headline: ~47% ASR / ~46% TTS reduction (see
+`report.md` §4.1 and §0.3 M2.3). See §0.3 M2.3.
 
 ---
 

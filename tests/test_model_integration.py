@@ -31,16 +31,17 @@ def test_training_arguments_kwargs_are_valid() -> None:
     valid_params = set(inspect.signature(TrainingArguments).parameters)
 
     source = inspect.getsource(
-        __import__("akan_bpe.model_integration", fromlist=["_build_model_and_training_args"])._build_model_and_training_args
+        __import__(
+            "akan_bpe.model_integration", fromlist=["_build_model_and_training_args"]
+        )._build_model_and_training_args
     )
     tree = ast.parse(source)
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
             continue
         func = node.func
-        is_training_args = (
-            (isinstance(func, ast.Name) and func.id == "training_arguments_cls")
-            or (isinstance(func, ast.Attribute) and func.attr == "TrainingArguments")
+        is_training_args = (isinstance(func, ast.Name) and func.id == "training_arguments_cls") or (
+            isinstance(func, ast.Attribute) and func.attr == "TrainingArguments"
         )
         if not is_training_args:
             continue
@@ -226,7 +227,9 @@ def test_run_model_integration_smoke_skips_training_and_artifacts(monkeypatch) -
         lambda path, max_samples=None: ["akwaaba ma me", "me din de kodwo"],
     )
     tokenizer = load_experiment_tokenizer(Path("models/tts_tokenizer.json"))
-    monkeypatch.setattr("akan_bpe.model_integration.load_experiment_tokenizer", lambda path: tokenizer)
+    monkeypatch.setattr(
+        "akan_bpe.model_integration.load_experiment_tokenizer", lambda path: tokenizer
+    )
     monkeypatch.setattr(
         "akan_bpe.model_integration.compute_token_count_comparison",
         lambda model_id, experiment_tokenizer, texts: {
@@ -249,12 +252,12 @@ def test_run_model_integration_smoke_skips_training_and_artifacts(monkeypatch) -
         eval_dataset,
         eval_texts,
         device,
-    ) -> tuple[dict[str, float], list[dict[str, str]], dict[str, object]]:
+    ) -> tuple[dict[str, object], list[dict[str, str]], dict[str, object], dict[str, object]]:
         called["smoke"] = True
         assert runtime_model_id == DEFAULT_SMOKE_MODEL_ID
         assert len(eval_dataset) == 2
         return (
-            {"eval_loss": 1.0, "perplexity": 2.0},
+            {"eval_loss": 1.0, "perplexity": 2.0, "bpb": {"experiment": {"bits_per_byte": 1.5}}},
             [{"prompt": "akwaaba", "completion": "akwaaba me nua"}],
             {
                 "enabled": True,
@@ -263,13 +266,16 @@ def test_run_model_integration_smoke_skips_training_and_artifacts(monkeypatch) -
                 "generation_succeeded": True,
                 "embedding_resize_succeeded": True,
             },
+            {"mode": "random", "rows_initialized": 0},
         )
 
     monkeypatch.setattr(
         "akan_bpe.model_integration._build_model_and_training_args",
         fake_build_model_and_training_args,
     )
-    monkeypatch.setattr("akan_bpe.model_integration._run_smoke_validation", fake_run_smoke_validation)
+    monkeypatch.setattr(
+        "akan_bpe.model_integration._run_smoke_validation", fake_run_smoke_validation
+    )
 
     payload = run_model_integration(config)
 
@@ -278,6 +284,9 @@ def test_run_model_integration_smoke_skips_training_and_artifacts(monkeypatch) -
     assert payload["runtime_model_id"] == DEFAULT_SMOKE_MODEL_ID
     assert payload["output_model_dir"] is None
     assert payload["smoke"]["validated_pipeline_only"] is True
+    assert payload["embedding_init_mode"] == "random"
+    assert payload["embedding_init"] == {"mode": "random", "rows_initialized": 0}
+    assert payload["eval"]["bpb"]["experiment"]["bits_per_byte"] == 1.5
 
 
 def test_run_model_integration_colab_qlora_uses_training_branch(monkeypatch) -> None:
@@ -296,6 +305,7 @@ def test_run_model_integration_colab_qlora_uses_training_branch(monkeypatch) -> 
         "akan_bpe.model_integration.load_texts",
         lambda path, max_samples=None: ["akwaaba ma me", "me din de kodwo"],
     )
+
     class FakeTensor:
         def __init__(self, data):
             self.data = data
@@ -339,7 +349,9 @@ def test_run_model_integration_colab_qlora_uses_training_branch(monkeypatch) -> 
             return 32
 
     tokenizer = FakeTokenizer()
-    monkeypatch.setattr("akan_bpe.model_integration.load_experiment_tokenizer", lambda path: tokenizer)
+    monkeypatch.setattr(
+        "akan_bpe.model_integration.load_experiment_tokenizer", lambda path: tokenizer
+    )
     monkeypatch.setattr(
         "akan_bpe.model_integration.compute_token_count_comparison",
         lambda model_id, experiment_tokenizer, texts: {
@@ -416,7 +428,22 @@ def test_run_model_integration_colab_qlora_uses_training_branch(monkeypatch) -> 
     def fake_build_model_and_training_args(config, tokenizer, runtime_model_id):
         trainer_called["build"] = True
         assert runtime_model_id == "Qwen/Qwen3-0.6B"
-        return FakeModel(), object(), {"cuda_available": False, "device_count": 0, "device_name": "cpu"}
+        return (
+            FakeModel(),
+            object(),
+            {"cuda_available": False, "device_count": 0, "device_name": "cpu"},
+            {"mode": "random", "rows_initialized": 0},
+        )
+
+    monkeypatch.setattr(
+        "akan_bpe.model_integration.compute_bpb_metrics",
+        lambda **kwargs: {
+            "experiment": {"bits_per_byte": 1.2},
+            "base": {"bits_per_byte": 1.8},
+            "improvement": 0.6,
+            "total_bytes": 42,
+        },
+    )
 
     def fake_run_smoke_validation(*args, **kwargs):
         trainer_called["smoke"] = True
@@ -426,7 +453,9 @@ def test_run_model_integration_colab_qlora_uses_training_branch(monkeypatch) -> 
         "akan_bpe.model_integration._build_model_and_training_args",
         fake_build_model_and_training_args,
     )
-    monkeypatch.setattr("akan_bpe.model_integration._run_smoke_validation", fake_run_smoke_validation)
+    monkeypatch.setattr(
+        "akan_bpe.model_integration._run_smoke_validation", fake_run_smoke_validation
+    )
     monkeypatch.setattr(
         "akan_bpe.model_integration.verify_saved_qwen_artifacts",
         lambda config, runtime_model_id, prompt: {
@@ -445,3 +474,250 @@ def test_run_model_integration_colab_qlora_uses_training_branch(monkeypatch) -> 
     assert payload["output_model_dir"] == "models/train001"
     assert payload["reload_verification"]["success"] is True
     assert payload["training"]["completed"] is True
+    assert payload["eval"]["bpb"]["improvement"] == 0.6
+    assert payload["embedding_init"] == {"mode": "random", "rows_initialized": 0}
+
+
+def test_compute_model_bpb_sums_nll_over_unmasked_tokens() -> None:
+    import torch
+
+    from akan_bpe.model_integration import compute_model_bpb
+
+    class FakeOutputs:
+        def __init__(self, logits):
+            self.logits = logits
+
+    class FakeBpbModel:
+        device = "cpu"
+
+        def __init__(self, logits):
+            self._logits = logits
+
+        def eval(self):
+            return self
+
+        def __call__(self, input_ids=None, attention_mask=None):
+            return FakeOutputs(self._logits)
+
+    # Two positions, vocab size 2, uniform logits -> each predicted token costs
+    # -log(0.5) = ln(2) nats == 1 bit. One unmasked target (label at position 1).
+    logits = torch.zeros(1, 2, 2)
+    model = FakeBpbModel(logits)
+    eval_dataset = [{"input_ids": [0, 1], "attention_mask": [1, 1], "labels": [0, 1]}]
+
+    result = compute_model_bpb(model, eval_dataset, total_bytes=10, torch=torch)
+
+    assert result.num_target_tokens == 1
+    assert result.total_nll_bits == pytest.approx(1.0)
+    assert result.bits_per_byte == pytest.approx(0.1)
+
+
+def test_compute_model_bpb_ignores_masked_labels() -> None:
+    import torch
+
+    from akan_bpe.model_integration import compute_model_bpb
+
+    class FakeOutputs:
+        def __init__(self, logits):
+            self.logits = logits
+
+    class FakeBpbModel:
+        device = "cpu"
+
+        def eval(self):
+            return self
+
+        def __call__(self, input_ids=None, attention_mask=None):
+            return FakeOutputs(torch.zeros(1, 2, 2))
+
+    # The only shifted target label is -100 -> no contributing tokens, zero NLL.
+    eval_dataset = [{"input_ids": [0, 1], "attention_mask": [1, 0], "labels": [0, -100]}]
+    result = compute_model_bpb(FakeBpbModel(), eval_dataset, total_bytes=10, torch=torch)
+
+    assert result.num_target_tokens == 0
+    assert result.total_nll_bits == pytest.approx(0.0)
+    assert result.bits_per_byte == pytest.approx(0.0)
+
+
+def test_init_embeddings_mean_of_subword_averages_base_rows() -> None:
+    import torch
+    from torch import nn
+
+    from akan_bpe.model_integration import _init_embeddings_mean_of_subword
+
+    class FakeEmbModel:
+        def __init__(self, vocab: int, dim: int) -> None:
+            self._inp = nn.Embedding(vocab, dim)
+            self._out = nn.Embedding(vocab, dim)
+
+        def get_input_embeddings(self):
+            return self._inp
+
+        def get_output_embeddings(self):
+            return self._out
+
+    class FakeExpTokenizer:
+        def __init__(self, surfaces: list[str]) -> None:
+            self._surfaces = surfaces
+
+        def __len__(self) -> int:
+            return len(self._surfaces)
+
+        def convert_ids_to_tokens(self, token_id: int) -> str:
+            return self._surfaces[token_id]
+
+        def convert_tokens_to_string(self, tokens: list[str]) -> str:
+            return tokens[0]
+
+    class FakeBaseTokenizer:
+        def __init__(self, mapping: dict[str, list[int]]) -> None:
+            self._mapping = mapping
+
+        def encode(self, surface: str, add_special_tokens: bool = False) -> list[int]:
+            return self._mapping.get(surface, [])
+
+    base_embeddings = torch.tensor([[1.0, 1.0], [3.0, 3.0], [5.0, 5.0]])  # global mean [3, 3]
+    model = FakeEmbModel(vocab=2, dim=2)
+    exp_tokenizer = FakeExpTokenizer(["a", "x"])
+    base_tokenizer = FakeBaseTokenizer({"a": [0, 1], "x": []})  # "x" maps to nothing -> fallback
+
+    rows = _init_embeddings_mean_of_subword(
+        model=model,
+        experiment_tokenizer=exp_tokenizer,
+        base_tokenizer=base_tokenizer,
+        base_input_embeddings=base_embeddings,
+        base_output_embeddings=base_embeddings,
+        torch=torch,
+    )
+
+    assert rows == 2
+    # "a" -> mean of base rows 0 and 1 = [2, 2]; "x" -> global fallback mean [3, 3].
+    assert torch.allclose(model.get_input_embeddings().weight[0], torch.tensor([2.0, 2.0]))
+    assert torch.allclose(model.get_input_embeddings().weight[1], torch.tensor([3.0, 3.0]))
+
+
+def test_resize_and_init_embeddings_random_is_noop(monkeypatch) -> None:
+    import torch
+    from torch import nn
+
+    from akan_bpe.model_integration import resize_and_init_embeddings
+
+    resized = {"called_with": None}
+
+    class FakeModel:
+        def __init__(self) -> None:
+            self._inp = nn.Embedding(4, 2)
+            self._out = nn.Embedding(4, 2)
+
+        def get_input_embeddings(self):
+            return self._inp
+
+        def get_output_embeddings(self):
+            return self._out
+
+        def resize_token_embeddings(self, new_len, pad_to_multiple_of=None):
+            resized["called_with"] = new_len
+
+    class FakeTokenizer:
+        def __len__(self) -> int:
+            return 3
+
+    # If random init ever touched AutoTokenizer this lambda would flip the flag.
+    touched = {"auto_tokenizer": False}
+
+    def fake_from_pretrained(model_id):
+        touched["auto_tokenizer"] = True
+        raise AssertionError("random init must not load the base tokenizer")
+
+    monkeypatch.setattr(
+        "akan_bpe.model_integration.AutoTokenizer.from_pretrained", fake_from_pretrained
+    )
+
+    config = ModelIntegrationConfig(
+        experiment_id="e",
+        model_id="m",
+        tokenizer_path="t",
+        train_file="tr",
+        eval_file="ev",
+        output_dir="o",
+        results_output="r",
+        embedding_init_mode="random",
+    )
+    record = resize_and_init_embeddings(config, FakeModel(), FakeTokenizer(), "m", torch)
+
+    assert record == {"mode": "random", "rows_initialized": 0}
+    assert resized["called_with"] == 3
+    assert touched["auto_tokenizer"] is False
+
+
+def test_build_result_payload_carries_bpb_and_embedding_init() -> None:
+    config = ModelIntegrationConfig(
+        experiment_id="exp",
+        model_id="Qwen/Qwen3-0.6B",
+        tokenizer_path="t",
+        train_file="tr",
+        eval_file="ev",
+        output_dir="o",
+        results_output="r",
+        embedding_init_mode="mean_subword",
+    )
+    payload = build_result_payload(
+        config=config,
+        runtime_model_id="Qwen/Qwen3-0.6B",
+        train_texts=["a"],
+        eval_texts=["b"],
+        token_count_comparison={"token_reduction_ratio": 0.1},
+        eval_metrics={
+            "eval_loss": 1.0,
+            "perplexity": 2.0,
+            "bpb": {"base": {"bits_per_byte": 1.8}, "experiment": {"bits_per_byte": 1.2}},
+        },
+        generation_samples=[],
+        device={"cuda_available": False, "device_name": "cpu", "device_count": 0},
+        output_model_dir="o",
+        embedding_init={"mode": "mean_subword", "rows_initialized": 8000},
+    )
+
+    assert payload["embedding_init_mode"] == "mean_subword"
+    assert payload["embedding_init"]["rows_initialized"] == 8000
+    assert payload["eval"]["bpb"]["experiment"]["bits_per_byte"] == 1.2
+
+
+def test_cli_parses_embedding_init_and_skip_base_bpb(monkeypatch) -> None:
+    from scripts import model_integration as cli
+
+    captured = {}
+
+    def fake_run(config: ModelIntegrationConfig) -> dict[str, object]:
+        captured["config"] = config
+        return {"experiment_id": config.experiment_id, "output_model_dir": config.output_dir}
+
+    monkeypatch.setattr(cli, "run_model_integration", fake_run)
+    monkeypatch.setattr(cli, "write_json", lambda path, payload: None)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "scripts/model_integration.py",
+            "--experiment-id",
+            "exp",
+            "--model-id",
+            "fake/model",
+            "--tokenizer-path",
+            "t.json",
+            "--train-file",
+            "tr.jsonl",
+            "--eval-file",
+            "ev.jsonl",
+            "--output-dir",
+            "out",
+            "--embedding-init-mode",
+            "mean_subword",
+            "--skip-base-bpb",
+        ],
+    )
+
+    cli.main()
+
+    assert captured["config"].embedding_init_mode == "mean_subword"
+    assert captured["config"].compute_base_bpb is False

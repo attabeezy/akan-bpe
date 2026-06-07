@@ -91,6 +91,27 @@ def _split_rows(rows: list[dict[str, str]]) -> dict[str, list[dict[str, str]]]:
     }
 
 
+def _assert_healthy_split(source: str, splits: dict[str, list[dict[str, str]]]) -> None:
+    """Fail loudly if a split looks truncated (e.g. a 1-row test set).
+
+    A streaming download that drops the connection mid-fetch can leave a tiny,
+    statistically useless validation/test split while train still looks large.
+    For any reasonably sized corpus the 10% holdouts must have a sane floor; a
+    1-sample test set is the stale-download artifact we want to catch here.
+    """
+    total = sum(len(rows) for rows in splits.values())
+    if total < 100:
+        return
+    floor = 10
+    for name in ("validation", "test"):
+        if len(splits[name]) < floor:
+            raise ValueError(
+                f"{source}: {name} split has only {len(splits[name])} rows out of {total} "
+                f"total (expected >= {floor}). The stream was likely truncated; re-run the "
+                "download with a stable connection."
+            )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Download Akan datasets for Akan-BPE.")
     parser.add_argument(
@@ -113,14 +134,18 @@ def main() -> None:
     manifest: dict[str, object] = {"language": "akan", "files": {}}
 
     asr_rows = _download_asr_split("train", args.asr_limit)
-    for split, rows in _split_rows(asr_rows).items():
+    asr_splits = _split_rows(asr_rows)
+    _assert_healthy_split("aka_asr", asr_splits)
+    for split, rows in asr_splits.items():
         path = output_dir / f"aka_asr_{split}.jsonl"
         count = write_jsonl(path, rows)
         manifest["files"][path.name] = {"count": count, "source": "aka_asr"}
         print(f"Wrote {count} rows to {path}")
 
     pristine_rows = _download_pristine_rows(args.tts_limit)
-    for split, rows in _split_rows(pristine_rows).items():
+    pristine_splits = _split_rows(pristine_rows)
+    _assert_healthy_split("pristine_twi", pristine_splits)
+    for split, rows in pristine_splits.items():
         path = output_dir / f"pristine_twi_{split}.jsonl"
         count = write_jsonl(path, rows)
         manifest["files"][path.name] = {"count": count, "source": "pristine_twi"}

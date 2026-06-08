@@ -15,7 +15,13 @@ from akan_bpe.io import ensure_parent_dir
 from akan_bpe.metrics import BpbResult, bits_per_byte, count_utf8_bytes
 
 DEFAULT_SMOKE_MODEL_ID = "sshleifer/tiny-gpt2"
-SUPPORTED_COLAB_QLORA_MODEL_IDS = ("Qwen/Qwen3-0.6B",)
+SUPPORTED_COLAB_QLORA_MODEL_IDS = (
+    "Qwen/Qwen3-0.6B",
+    "Qwen/Qwen3-1.7B",
+    "google/gemma-3-1b-pt",
+    "meta-llama/Llama-3.2-1B",
+    "CohereLabs/tiny-aya-base",
+)
 VALID_EMBEDDING_INIT_MODES = ("random", "mean_subword")
 
 
@@ -129,7 +135,7 @@ def validate_colab_qlora_config(config: ModelIntegrationConfig) -> None:
     if config.model_id not in SUPPORTED_COLAB_QLORA_MODEL_IDS:
         supported = ", ".join(SUPPORTED_COLAB_QLORA_MODEL_IDS)
         raise ValueError(
-            "`colab-qlora` currently supports only the Qwen 2A1 path. "
+            "`colab-qlora` does not support this model. "
             f"Received model_id={config.model_id!r}; supported values: {supported}."
         )
 

@@ -151,7 +151,7 @@ def test_build_result_payload_contains_required_fields() -> None:
 def test_validate_colab_qlora_config_rejects_unsupported_model() -> None:
     config = ModelIntegrationConfig(
         experiment_id="bad001",
-        model_id="meta-llama/Llama-3.2-1B",
+        model_id="sshleifer/tiny-gpt2",
         tokenizer_path="models/tts_tokenizer.json",
         train_file="data/pristine_twi_train.jsonl",
         eval_file="data/pristine_twi_test.jsonl",
@@ -160,7 +160,7 @@ def test_validate_colab_qlora_config_rejects_unsupported_model() -> None:
         device_mode="colab-qlora",
     )
 
-    with pytest.raises(ValueError, match="supports only the Qwen 2A1 path"):
+    with pytest.raises(ValueError, match="does not support this model"):
         validate_colab_qlora_config(config)
 
 

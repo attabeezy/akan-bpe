@@ -17,7 +17,9 @@ from akan_bpe.metrics import BpbResult, bits_per_byte, count_utf8_bytes
 DEFAULT_SMOKE_MODEL_ID = "sshleifer/tiny-gpt2"
 SUPPORTED_COLAB_QLORA_MODEL_IDS = (
     "Qwen/Qwen3-0.6B",
+    "Qwen/Qwen3-0.6B-Base",
     "Qwen/Qwen3-1.7B",
+    "Qwen/Qwen3-1.7B-Base",
     "google/gemma-3-1b-pt",
     "meta-llama/Llama-3.2-1B",
     "CohereLabs/tiny-aya-base",

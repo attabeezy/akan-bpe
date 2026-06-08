@@ -1,13 +1,13 @@
 # Akan-BPE — Project Reference
 **Eliminating the Tokenization Tax for Akan via BPE Tokenizer Experiments**
 
-**Status:** Phase 2A In Progress (v0.2.0) — 2A1 complete (first Colab QLoRA run); 2A2 next  
+**Status:** Phase 2A In Progress (v0.2.0) — 2A1 + 2A2 complete (Kaggle QLoRA runs); 2A3 (Gemma-3-1B) next  
 **Scope:** Akan (Twi), tokenizer experiments with ML routing  
 **Paper target:** AfricaNLP / WiNLP workshop (4–8 pages). The active plan is now driven by
 this submission — see §0 (Research Design & Road to Paper) for the locked decisions and the
 milestone road. §0 takes precedence where it tightens or narrows the longer Phase 2 plan below.  
-**Completed:** Tokenizer training, fertility benchmarks vs multilingual baselines, balanced mixed tokenizer, router with held-out eval, first model-integration run (Qwen3-0.6B + Akan TTS tokenizer on Colab/T4)  
-**Current hardware:** CPU (local) / Colab T4 (model integration)  
+**Completed:** Tokenizer training, fertility benchmarks vs multilingual baselines, balanced mixed tokenizer, router with held-out eval, model-integration runs 2A1 (Qwen3-0.6B) + 2A2 (Qwen3-1.7B) with the Akan TTS tokenizer on Kaggle/T4  
+**Current hardware:** CPU (local) / Kaggle T4 (model integration)  
 **Next hardware:** Continued Colab/Kaggle GPU for the model ladder; Dell Latitude 7400 for edge deployment
 
 ---
@@ -73,7 +73,7 @@ transparency.
 | # | Model | Params | ~Base vocab | Axis / why it's in | License |
 |---|---|---|---|---|---|
 | **2A1 ✅** | `Qwen/Qwen3-0.6B` | 0.6B | ~151k | Scale anchor (low); proven path | Apache-2.0 |
-| **2A2** | `Qwen/Qwen3-1.7B` | 1.7B | ~151k | Scale anchor (high) — **isolates scale**, family held constant | Apache-2.0 |
+| **2A2 ✅** | `Qwen/Qwen3-1.7B` | 1.7B | ~151k | Scale anchor (high) — **isolates scale**, family held constant | Apache-2.0 |
 | **2A3** | `google/gemma-3-1b-pt` | ~1B | ~256k | Multilingual + largest base vocab → tax survives *even* a 256k vocab | Gemma (gated) |
 | **2A4** | `meta-llama/Llama-3.2-1B` | ~1.2B | ~128k | English-centric → biggest tax/gain; deployment-standard, seeds Phase 2B | Llama (gated) |
 | **2A5** | `CohereLabs/tiny-aya-base` | 3.35B | TBD* | Africa-aware multilingual pretraining → does the gain hold *even here?* + GGUF edge tie-in | CC-BY-NC |
@@ -118,7 +118,7 @@ ladder + edge + cross-lingual). Figures from existing result JSON; code release 
 ```
 M2 (BPB + ASR split fix)  ← before any new model run, or they get redone
         ↓
-M3 (5 runs: Qwen3-0.6B✅ + Qwen3-1.7B + Gemma-3-1B + Llama-3.2-1B + tiny-aya-base, in BPB)
+M3 (5 runs: Qwen3-0.6B✅ + Qwen3-1.7B✅ + Gemma-3-1B + Llama-3.2-1B + tiny-aya-base, in BPB)
         ↓
 M4 (chrF generation quality)
         ↓
@@ -176,7 +176,7 @@ The active scope is tokenizer + routing experiments.
 
 **In progress / next phases (per the §0 paper plan):**
 - Methodology hardening (M2) — add bits-per-byte eval, embedding-init ablation, fix the ASR test split. **Do before more model runs.**
-- Model integration (M3) — 2A1 complete: Qwen3-0.6B QLoRA fine-tune with the Akan TTS tokenizer on Colab/T4 (50.3% fertility reduction; BPB 1.082 vs base 1.163; mean-of-subword init ablation wins at 0.942 BPB / 47.2 ppl and is now the default — see report §8.1). Next: a 5-run set — Qwen3-1.7B, Gemma-3-1B, Llama-3.2-1B, and tiny-aya-base — reported in BPB (see §0.3 M3).
+- Model integration (M3) — 2A1 + 2A2 complete (Kaggle/T4). 2A1 (Qwen3-0.6B): 50.3% fertility reduction; BPB 1.079 vs base 1.101; mean-of-subword init wins at 0.932 BPB / 45.4 ppl and is the default — see report §8.1. 2A2 (Qwen3-1.7B, scale step): stronger 1.031 base BPB means random-init no longer beats base (−0.046), but mean-subword still wins at 0.907 BPB (+0.125) — see report §9. Next: Gemma-3-1B, Llama-3.2-1B, tiny-aya-base, reported in BPB (see §0.3 M3).
 - Generation quality (M4) — chrF on held-out Twi continuations.
 - Edge deployment — optional for the paper (light latency note if cheap); full GGUF + Dell Latitude 7400 benchmarking is deferred to future work.
 
@@ -503,20 +503,27 @@ Phase 2A1 is complete. The first real Colab QLoRA run executed end-to-end. The r
 - `notebooks/2a1_qwen3-0.6b_tts.ipynb` — executed Colab/T4 run for `Qwen/Qwen3-0.6B` (outputs preserved in the notebook)
 - `tests/test_model_integration.py` — CPU-safe orchestration and artifact-contract coverage
 
-**2A1 result (Qwen3-0.6B + Akan TTS tokenizer, QLoRA 4-bit nf4, Tesla T4, 1 epoch):**
+**2A1 result (Qwen3-0.6B + Akan TTS tokenizer, QLoRA 4-bit nf4, Kaggle Tesla T4, 1 epoch):**
 
 - Base model tokenizer fertility: 2.530 tokens/word → Akan TTS tokenizer: 1.259 tokens/word (**50.3% reduction** on the eval set)
-- Eval loss 4.4275 / perplexity 83.72 (random embedding init)
-- **BPB (tokenizer-agnostic): 1.0817 vs base 1.1633** — the fine-tuned model is better per byte, not just per token
+- Eval loss 4.4146 / perplexity 82.65 (random embedding init)
+- **BPB (tokenizer-agnostic): 1.0785 vs base 1.1008** — the fine-tuned model is better per byte, not just per token
 - Generation produces coherent Twi continuations; save → reload-from-adapter inference verified
 
 **Embedding-init ablation (M2 modeling contribution), same run config:** mean-of-subword init
-beats random on every metric — BPB **0.9417 vs 1.0817**, perplexity **47.20 vs 83.72**, eval loss
-3.8544 vs 4.4275 — for zero extra training cost. Both arms beat the base model's 1.1633 BPB.
+beats random on every metric — BPB **0.9319 vs 1.0785**, perplexity **45.35 vs 82.65**, eval loss
+3.8144 vs 4.4146 — for zero extra training cost. Both arms beat the base model's 1.1008 BPB.
 `mean_subword` is adopted as the default embedding init for the M3 ladder. Both arms (and the BPB
 display) are reproduced in `notebooks/2a1_qwen3-0.6b_tts.ipynb`; see `report.md` §8.1.
 
-Next step is 2A2 (`Qwen/Qwen3-1.7B`).
+**2A2 result (Qwen3-1.7B, scale step — config clone, Kaggle Tesla T4, 1 epoch):** same 50.3%
+fertility reduction (shared Qwen3 tokenizer). The stronger 1.7B base scores **1.0313 BPB**, so the
+**random-init** arm (1.0777 BPB) *loses* to the base (−0.0464), but **mean-of-subword** still wins
+clearly at **0.9066 BPB** (perplexity 40.88, +0.1247 vs base). At scale, warm-start embedding init
+is what separates a winning run from a losing one. See `notebooks/2a2_qwen3-1.7b_tts.ipynb` and
+`report.md` §9.
+
+Next step is 2A3 (`google/gemma-3-1b-pt`).
 
 ### 14.4 Edge deployment
 
@@ -560,7 +567,7 @@ Phase 1 answered the tokenizer question. Phase 2 asks whether those gains transl
 
 **Goal:** Verify that fertility reduction translates into measurable downstream benefit — faster inference, lower perplexity, or better generation — not just a smaller token count.
 
-**Current status:** 2A1 is complete — the first real Colab/T4 QLoRA run executed end-to-end on `Qwen/Qwen3-0.6B` with the Akan TTS tokenizer (50.3% fertility reduction on the eval set, eval perplexity 83.72, BPB 1.082 vs base 1.163, coherent Twi generation, save/reload verified; mean-of-subword embedding-init ablation reaches 0.942 BPB / 47.2 ppl). The repo contains:
+**Current status:** 2A1 + 2A2 are complete — QLoRA runs executed end-to-end on Kaggle/T4. 2A1 (`Qwen/Qwen3-0.6B`): 50.3% fertility reduction on the eval set, eval perplexity 82.65, BPB 1.079 vs base 1.101, coherent Twi generation, save/reload verified; mean-of-subword embedding-init ablation reaches 0.932 BPB / 45.4 ppl. 2A2 (`Qwen/Qwen3-1.7B`, scale step): mean-subword 0.907 BPB vs base 1.031 (random-init loses to base at this scale). The repo contains:
 
 - `akan_bpe/model_integration.py` for dataset prep, tokenizer/model loading, token-count comparison, LoRA/QLoRA setup, eval, generation samples, and JSON artifact creation
 - `scripts/model_integration.py` for one CLI-driven experiment run
@@ -577,8 +584,8 @@ aya-expanse-8b) is deferred to future work.
 
 | Phase | Model | Role | Free-GPU feasibility |
 |---|---|---|---|
-| **2A1 ✅** | `Qwen/Qwen3-0.6B` | First real Colab/T4 QLoRA run: tokenizer replacement, embedding resize, train/eval, generation, save/load verification — **done** (50.3% fertility reduction, perplexity 83.72, BPB 1.082 vs base 1.163; mean-subword init ablation 0.942 BPB) | Feasible — completed |
-| **2A2** | `Qwen/Qwen3-1.7B` | Main small-model experiment after 2A1 proves the path | Feasible with LoRA/QLoRA |
+| **2A1 ✅** | `Qwen/Qwen3-0.6B` | First real Kaggle/T4 QLoRA run: tokenizer replacement, embedding resize, train/eval, generation, save/load verification — **done** (50.3% fertility reduction, perplexity 82.65, BPB 1.079 vs base 1.101; mean-subword init ablation 0.932 BPB) | Feasible — completed |
+| **2A2 ✅** | `Qwen/Qwen3-1.7B` | Scale step (config clone of 2A1) — **done** (50.3% fertility reduction, perplexity 40.88, BPB 0.907 vs base 1.031 with mean-subword init; random-init loses to base at this scale, −0.046 BPB — see report §9) | Feasible — completed |
 | **2A3** | `google/gemma-3-1b-*` | Broad multilingual vendor/architecture comparison | Feasible; check Gemma license and PT/IT choice |
 | **2A4** | `meta-llama/Llama-3.2-1B` or `meta-llama/Llama-3.2-3B` | Deployment ecosystem comparison | 1B feasible; 3B QLoRA with conservative settings |
 | **2A5** | `CohereLabs/tiny-aya-earth` | Africa/West Asia-focused multilingual experiment | QLoRA-only; CC-BY-NC research/non-commercial license |
@@ -628,21 +635,31 @@ that cover similar character sequences). For the paper this is promoted to a del
 **embedding-init ablation** (random vs mean-of-subword) — see §0.3 M2.2 — and is the modeling
 contribution rather than just a risk to monitor.
 
-#### 16.1.1 Phase 2A2 — next actions (`Qwen/Qwen3-1.7B`)
+#### 16.1.1 Phase 2A2 — ✅ done (`Qwen/Qwen3-1.7B`)
 
-The 2A1 path is proven, so 2A2 is mostly a configuration change on the same machinery.
-Concrete steps:
+Completed on Kaggle/T4 (`notebooks/2a2_qwen3-1.7b_tts.ipynb`, see `report.md` §9). The 2A1
+machinery cloned cleanly: allowlist extended to `Qwen/Qwen3-1.7B`, TTS tokenizer + dataset paths
+kept, `CUDA_VISIBLE_DEVICES=0` pinned to dodge the DataParallel + QLoRA crash on T4×2. Outcome:
+50.3% fertility reduction (shared Qwen3 tokenizer), mean-subword **0.9066 BPB vs base 1.0313**.
+**The §16.1 failure mode actually fired:** the stronger 1.7B base means the *random-init* arm
+(1.0777 BPB) loses to the base (−0.0464) — only mean-of-subword init clears it. This is the
+clearest evidence yet that the embedding-init ablation is the modeling contribution, not just a
+risk to monitor.
 
-1. **Extend the QLoRA allowlist.** `colab-qlora` mode is intentionally pinned to one
-   model: `SUPPORTED_COLAB_QLORA_MODEL_IDS = ("Qwen/Qwen3-0.6B",)` in
-   `akan_bpe/model_integration.py`. Add `"Qwen/Qwen3-1.7B"` there (and update
+#### 16.1.2 Phase 2A3 — next actions (`google/gemma-3-1b-pt`)
+
+The same machinery carries over; 2A3 is mostly config + license/architecture care:
+
+1. **Extend the QLoRA allowlist.** Add `"google/gemma-3-1b-pt"` to
+   `SUPPORTED_COLAB_QLORA_MODEL_IDS` in `akan_bpe/model_integration.py` (and update
    `validate_colab_qlora_config` coverage in `tests/test_model_integration.py`).
-2. **Clone the notebook.** Copy `notebooks/2a1_qwen3-0.6b_tts.ipynb` to a 2A2 variant and
-   point `--model-id` at `Qwen/Qwen3-1.7B`; keep the TTS tokenizer and dataset paths.
-   1.7B in 4-bit fits a free T4 but may need a smaller `--batch-size` / higher
-   `--grad-accum` than 2A1.
-3. **Compare against 2A1.** Record the same metrics (fertility reduction, eval
-   perplexity, generation quality) so 2A1 vs 2A2 is an apples-to-apples ladder step.
+2. **Gated model + license.** Gemma is gated — accept the license and supply an HF token in the
+   notebook. Confirm the PT (pretrained) checkpoint, not IT, to avoid the SFT confound.
+3. **Clone the notebook.** Copy `notebooks/2a2_qwen3-1.7b_tts.ipynb`, point `--model-id` at
+   `google/gemma-3-1b-pt`; verify the LoRA target-module names match Gemma's attention/MLP
+   naming. Note Gemma's ~256k base vocab — the tax-survives-a-big-vocab angle (§0.3).
+4. **Compare across the ladder.** Record the same metrics (fertility reduction, BPB both arms,
+   generation) so 2A1 → 2A2 → 2A3 stays apples-to-apples.
 
 **ASR test split — M2 fix, ✅ done.** The dual-regime (ASR + TTS) story is now statistically
 valid. The stale single-sample ASR test split (three files left over from different runs) was
@@ -707,8 +724,8 @@ Phase 1 (DONE)
     │       └── Fix ASR test split + re-run Phase 1 fertility benchmark
     └── M3 Model evidence (5 runs, reported in BPB; run cheapest/safest first)
     │       ├── 2A1 Qwen3-0.6B (DONE)
-    │       ├── 2A2 Qwen3-1.7B (NEXT — scale step, config clone)
-    │       ├── 2A3 Gemma-3-1B (multilingual, 256k vocab)
+    │       ├── 2A2 Qwen3-1.7B (DONE — scale step)
+    │       ├── 2A3 Gemma-3-1B (NEXT — multilingual, 256k vocab)
     │       ├── 2A4 Llama-3.2-1B (English-centric, deployment-standard)
     │       └── 2A5 tiny-aya-base (Africa-aware, 3.35B — run last, custom arch)
     └── M4 Generation quality (chrF on held-out Twi)

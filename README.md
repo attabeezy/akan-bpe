@@ -14,10 +14,12 @@ landed its first Phase 2A model-integration run:
 - normalize Akan ASR and formal-text datasets
 - train tokenizer variants for `asr`, `tts`, and `mixed`
 - compare them against multilingual baselines (XLM-R, mBERT, mT5) in one unified fertility experiment JSON
-- fine-tune `Qwen/Qwen3-0.6B` with the Akan TTS tokenizer via QLoRA on Colab/T4
-  (Phase 2A1, completed): **50.3% fewer tokens/word** than the base tokenizer on the
-  eval set and a better bits-per-byte than the base model (1.082 vs 1.163), with coherent
-  Twi generation; a mean-of-subword embedding-init ablation pushes BPB to 0.942
+- fine-tune `Qwen/Qwen3-0.6B` (Phase 2A1) and `Qwen/Qwen3-1.7B` (Phase 2A2, scale step)
+  with the Akan TTS tokenizer via QLoRA on Kaggle/T4 — both completed: **50.3% fewer
+  tokens/word** than the base tokenizer on the eval set, with coherent Twi generation. With
+  mean-of-subword embedding init the fine-tuned model beats the base on bits-per-byte
+  (2A1: 0.932 vs 1.101; 2A2: 0.907 vs 1.031). A key finding: at 1.7B the stronger base means
+  *random* init no longer wins — only the mean-of-subword init does
 
 > **Looking for the full plan?** [`project.md`](project.md) is the authoritative
 > project reference — research design, milestones, model ladder, file contracts, and
@@ -199,12 +201,13 @@ Akan-BPE/
 - [x] Fertility benchmark vs multilingual baselines (XLM-R, mBERT, mT5)
 - [x] Heuristic router + ML classifier router (held-out eval)
 - [x] Technical report (`report.md`)
-- [x] Phase 2A1: Qwen3-0.6B QLoRA fine-tune with Akan TTS tokenizer on Colab/T4 (50.3% fertility reduction)
+- [x] Phase 2A1: Qwen3-0.6B QLoRA fine-tune with Akan TTS tokenizer on Kaggle/T4 (50.3% fertility reduction)
+- [x] Phase 2A2: Qwen3-1.7B QLoRA scale step on Kaggle/T4 (mean-subword BPB 0.907 vs base 1.031; random-init loses to base at this scale)
 - [x] **M2** methodology hardening:
   - [x] bits-per-byte (BPB) metric — base vs experiment model on the same eval bytes (`akan_bpe/model_integration.py`)
-  - [x] embedding-init ablation — `--embedding-init-mode {random,mean_subword}`; on 2A1, mean-of-subword init wins (BPB 0.942 vs random 1.082, perplexity 47.2 vs 83.7) and is now the ladder default
+  - [x] embedding-init ablation — `--embedding-init-mode {random,mean_subword}`; on 2A1, mean-of-subword init wins (BPB 0.932 vs random 1.079, perplexity 45.4 vs 82.7) and is now the ladder default
   - [x] regenerated ASR test split — full WaxalNLP stream re-split to 8,085/1,011/1,011 (was a 1-sample test); ASR + mixed tokenizers and router retrained, benchmark re-run; `scripts/download.py` now fails loudly on a truncated split
-- [ ] **M3** model evidence: 5 runs across families/scales (Qwen3-1.7B, Gemma-3-1B, Llama-3.2-1B, tiny-aya-base) reported in BPB
+- [ ] **M3** model evidence: 5 runs across families/scales (Qwen3-0.6B ✅, Qwen3-1.7B ✅, Gemma-3-1B, Llama-3.2-1B, tiny-aya-base) reported in BPB
 - [ ] **M4** generation quality: chrF on held-out Twi
 - [ ] **M5** write & submit (AfricaNLP / WiNLP workshop)
 

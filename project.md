@@ -1,7 +1,7 @@
 # Akan-BPE — Project Reference
 **Eliminating the Tokenization Tax for Akan via BPE Tokenizer Experiments**
 
-**Status:** Phase 2A In Progress (v0.2.0) — 2A1 + 2A2 complete (Kaggle QLoRA runs); 2A3 (Gemma-3-1B) next  
+**Status:** Phase 2A In Progress (v0.2.0) — 2A1 + 2A2 + 2A3 complete (Kaggle QLoRA runs); 2A4 (Llama-3.2-1B) next  
 **Scope:** Akan (Twi), tokenizer experiments with ML routing  
 **Paper target:** AfricaNLP / WiNLP workshop (4–8 pages). The active plan is now driven by
 this submission — see §0 (Research Design & Road to Paper) for the locked decisions and the
@@ -74,7 +74,7 @@ transparency.
 |---|---|---|---|---|---|
 | **2A1 ✅** | `Qwen/Qwen3-0.6B` | 0.6B | ~151k | Scale anchor (low); proven path | Apache-2.0 |
 | **2A2 ✅** | `Qwen/Qwen3-1.7B` | 1.7B | ~151k | Scale anchor (high) — **isolates scale**, family held constant | Apache-2.0 |
-| **2A3** | `google/gemma-3-1b-pt` | ~1B | ~256k | Multilingual + largest base vocab → tax survives *even* a 256k vocab | Gemma (gated) |
+| **2A3 ✅** | `google/gemma-3-1b-pt` | ~1B | ~256k | Multilingual + largest base vocab → tax survives *even* a 256k vocab | Gemma (gated) |
 | **2A4** | `meta-llama/Llama-3.2-1B` | ~1.2B | ~128k | English-centric → biggest tax/gain; deployment-standard, seeds Phase 2B | Llama (gated) |
 | **2A5** | `CohereLabs/tiny-aya-base` | 3.35B | TBD* | Africa-aware multilingual pretraining → does the gain hold *even here?* + GGUF edge tie-in | CC-BY-NC |
 
@@ -118,7 +118,7 @@ ladder + edge + cross-lingual). Figures from existing result JSON; code release 
 ```
 M2 (BPB + ASR split fix)  ← before any new model run, or they get redone
         ↓
-M3 (5 runs: Qwen3-0.6B✅ + Qwen3-1.7B✅ + Gemma-3-1B + Llama-3.2-1B + tiny-aya-base, in BPB)
+M3 (5 runs: Qwen3-0.6B✅ + Qwen3-1.7B✅ + Gemma-3-1B✅ + Llama-3.2-1B + tiny-aya-base, in BPB)
         ↓
 M4 (chrF generation quality)
         ↓
@@ -176,7 +176,7 @@ The active scope is tokenizer + routing experiments.
 
 **In progress / next phases (per the §0 paper plan):**
 - Methodology hardening (M2) — add bits-per-byte eval, embedding-init ablation, fix the ASR test split. **Do before more model runs.**
-- Model integration (M3) — 2A1 + 2A2 complete (Kaggle/T4). 2A1 (Qwen3-0.6B): 50.3% fertility reduction; BPB 1.079 vs base 1.101; mean-of-subword init wins at 0.932 BPB / 45.4 ppl and is the default — see report §8.1. 2A2 (Qwen3-1.7B, scale step): stronger 1.031 base BPB means random-init no longer beats base (−0.046), but mean-subword still wins at 0.907 BPB (+0.125) — see report §9. Next: Gemma-3-1B, Llama-3.2-1B, tiny-aya-base, reported in BPB (see §0.3 M3).
+- Model integration (M3) — 2A1 + 2A2 + 2A3 complete (Kaggle/T4). 2A1 (Qwen3-0.6B): 50.3% fertility reduction; mean-subword 0.932 BPB vs base 1.101 — see report §8.1. 2A2 (Qwen3-1.7B, scale step): stronger 1.031 base means random-init loses to base (−0.046), mean-subword wins at 0.907 (+0.125) — see report §9. 2A3 (Gemma-3-1B, family/256k-vocab step): tax survives a 256k vocab (44.9% reduction), weak Gemma base (1.389 BPB) → mean-subword nearly halves it to 0.896 (+0.493, largest win) — see report §10. Next: Llama-3.2-1B, tiny-aya-base, reported in BPB (see §0.3 M3).
 - Generation quality (M4) — chrF on held-out Twi continuations.
 - Edge deployment — optional for the paper (light latency note if cheap); full GGUF + Dell Latitude 7400 benchmarking is deferred to future work.
 
@@ -523,7 +523,15 @@ clearly at **0.9066 BPB** (perplexity 40.88, +0.1247 vs base). At scale, warm-st
 is what separates a winning run from a losing one. See `notebooks/2a2_qwen3-1.7b_tts.ipynb` and
 `report.md` §9.
 
-Next step is 2A3 (`google/gemma-3-1b-pt`).
+**2A3 result (Gemma-3-1b-pt, family + 256k-vocab step, Kaggle Tesla T4, 1 epoch):** a different
+family with the ladder's largest base vocab. The tax survives even a 256k vocab — **44.9% fertility
+reduction** (2.284 → 1.259). Gemma's base is *weak* on Twi (**1.3889 BPB**, worse than either Qwen
+base), so **both** arms beat it: random 1.0918 (+0.2971), **mean-of-subword 0.8961** (perplexity
+39.17, **+0.4928** — the ladder's largest per-byte win). This kills the "Qwen quirk" objection and
+shows the tax is not an artifact of small vocab. See `notebooks/2a3_gemma-3-1b_tts.ipynb` and
+`report.md` §10.
+
+Next step is 2A4 (`meta-llama/Llama-3.2-1B`).
 
 ### 14.4 Edge deployment
 
@@ -586,7 +594,7 @@ aya-expanse-8b) is deferred to future work.
 |---|---|---|---|
 | **2A1 ✅** | `Qwen/Qwen3-0.6B` | First real Kaggle/T4 QLoRA run: tokenizer replacement, embedding resize, train/eval, generation, save/load verification — **done** (50.3% fertility reduction, perplexity 82.65, BPB 1.079 vs base 1.101; mean-subword init ablation 0.932 BPB) | Feasible — completed |
 | **2A2 ✅** | `Qwen/Qwen3-1.7B` | Scale step (config clone of 2A1) — **done** (50.3% fertility reduction, perplexity 40.88, BPB 0.907 vs base 1.031 with mean-subword init; random-init loses to base at this scale, −0.046 BPB — see report §9) | Feasible — completed |
-| **2A3** | `google/gemma-3-1b-*` | Broad multilingual vendor/architecture comparison | Feasible; check Gemma license and PT/IT choice |
+| **2A3 ✅** | `google/gemma-3-1b-pt` | Family + 256k-vocab step — **done** (44.9% fertility reduction; weak Gemma base 1.389 BPB → mean-subword 0.896, +0.493 — largest per-byte win, tax survives a 256k vocab; both arms beat the weak base — see report §10) | Feasible — completed |
 | **2A4** | `meta-llama/Llama-3.2-1B` or `meta-llama/Llama-3.2-3B` | Deployment ecosystem comparison | 1B feasible; 3B QLoRA with conservative settings |
 | **2A5** | `CohereLabs/tiny-aya-earth` | Africa/West Asia-focused multilingual experiment | QLoRA-only; CC-BY-NC research/non-commercial license |
 | **2A6** | `microsoft/Phi-4-mini-instruct` or `CohereLabs/aya-expanse-8b` | Stretch/reference tier: Phi for edge-quality upper bound, Aya Expanse for multilingual reference | Phi QLoRA stretch; Aya Expanse inference/reference-only |
@@ -646,20 +654,31 @@ kept, `CUDA_VISIBLE_DEVICES=0` pinned to dodge the DataParallel + QLoRA crash on
 clearest evidence yet that the embedding-init ablation is the modeling contribution, not just a
 risk to monitor.
 
-#### 16.1.2 Phase 2A3 — next actions (`google/gemma-3-1b-pt`)
+#### 16.1.2 Phase 2A3 — ✅ done (`google/gemma-3-1b-pt`)
 
-The same machinery carries over; 2A3 is mostly config + license/architecture care:
+Completed on Kaggle/T4 (`notebooks/2a3_gemma-3-1b_tts.ipynb`, see `report.md` §10). Different
+family, largest base vocab (~256k), PT checkpoint to avoid the SFT confound. Outcome: 44.9%
+fertility reduction (the tax survives a 256k vocab), and a *weak* Gemma Twi base (1.3889 BPB) →
+mean-subword **0.8961 BPB (+0.4928)**, the ladder's largest per-byte win. Unlike 2A2 both arms beat
+the base here, because the base is weak — the size of the win tracks how poorly the base models Twi.
+Kills the "Qwen quirk" and "small-vocab artifact" objections in one rung.
 
-1. **Extend the QLoRA allowlist.** Add `"google/gemma-3-1b-pt"` to
+#### 16.1.3 Phase 2A4 — next actions (`meta-llama/Llama-3.2-1B`)
+
+The English-centric, deployment-standard rung (§0.3) — expected to show the *biggest* tax/gain and
+seeds Phase 2B edge work. Same machinery:
+
+1. **Extend the QLoRA allowlist.** Add `"meta-llama/Llama-3.2-1B"` to
    `SUPPORTED_COLAB_QLORA_MODEL_IDS` in `akan_bpe/model_integration.py` (and update
    `validate_colab_qlora_config` coverage in `tests/test_model_integration.py`).
-2. **Gated model + license.** Gemma is gated — accept the license and supply an HF token in the
-   notebook. Confirm the PT (pretrained) checkpoint, not IT, to avoid the SFT confound.
-3. **Clone the notebook.** Copy `notebooks/2a2_qwen3-1.7b_tts.ipynb`, point `--model-id` at
-   `google/gemma-3-1b-pt`; verify the LoRA target-module names match Gemma's attention/MLP
-   naming. Note Gemma's ~256k base vocab — the tax-survives-a-big-vocab angle (§0.3).
-4. **Compare across the ladder.** Record the same metrics (fertility reduction, BPB both arms,
-   generation) so 2A1 → 2A2 → 2A3 stays apples-to-apples.
+2. **Gated model + license.** Llama is gated — accept the license and supply an HF token.
+   Use the base `Llama-3.2-1B`, not `-Instruct`, to avoid the SFT confound.
+3. **Clone the notebook.** Copy `notebooks/2a3_gemma-3-1b_tts.ipynb`, point `--model-id` at
+   `meta-llama/Llama-3.2-1B`; Llama uses the standard Llama attention/MLP module names, so the
+   LoRA targets from the Qwen/Gemma runs should carry over. ~128k base vocab — English-centric, so
+   expect the largest fertility tax and a weak Twi base (likely both arms beat it, à la 2A3).
+4. **Compare across the ladder.** Record the same metrics so 2A1 → 2A4 stays apples-to-apples; add
+   the row to the report §10.1 ladder table.
 
 **ASR test split — M2 fix, ✅ done.** The dual-regime (ASR + TTS) story is now statistically
 valid. The stale single-sample ASR test split (three files left over from different runs) was
@@ -725,8 +744,8 @@ Phase 1 (DONE)
     └── M3 Model evidence (5 runs, reported in BPB; run cheapest/safest first)
     │       ├── 2A1 Qwen3-0.6B (DONE)
     │       ├── 2A2 Qwen3-1.7B (DONE — scale step)
-    │       ├── 2A3 Gemma-3-1B (NEXT — multilingual, 256k vocab)
-    │       ├── 2A4 Llama-3.2-1B (English-centric, deployment-standard)
+    │       ├── 2A3 Gemma-3-1B (DONE — multilingual, 256k vocab)
+    │       ├── 2A4 Llama-3.2-1B (NEXT — English-centric, deployment-standard)
     │       └── 2A5 tiny-aya-base (Africa-aware, 3.35B — run last, custom arch)
     └── M4 Generation quality (chrF on held-out Twi)
     └── M5 Write & submit (AfricaNLP/WiNLP)

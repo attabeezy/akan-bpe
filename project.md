@@ -721,10 +721,11 @@ The BPB metric truncates each text to `max_length-1` tokens but divides by the f
 deflating BPB for high-fertility base tokenizers most — the likely cause of the negative 2A4/2A5
 signs. Next actions:
 
-1. **Run the helper notebook.** `notebooks/2a4_llama_eval_helper.ipynb` (retrain-in-session) quantifies
-   the truncation, reproduces the 0.7685 artifact, and recomputes base + retrained-Llama BPB with
-   **full byte coverage** (no truncation). Verdict: does Llama (and by extension tiny-aya) flip to a
-   positive corrected improvement?
+1. **Run the helper notebooks.** `notebooks/2a4_llama_eval_helper.ipynb` and
+   `notebooks/2a5_tiny_aya_eval_helper.ipynb` (retrain-in-session) quantify the truncation, reproduce
+   the 0.7685 / 0.8779 artifacts, and recompute base + retrained-adapter BPB with **full byte
+   coverage** (no truncation). Verdict: do the two negative rungs (Llama, tiny-aya) flip to a positive
+   corrected improvement?
 2. **If confirmed, fix the library.** Change `build_text_dataset` / `compute_model_bpb`
    (`akan_bpe/model_integration.py`) to score full coverage (sliding-window / chunked), add a
    regression test, then **re-run the 5-rung ladder** and update `report.md` §8–§12 + §10.1 with the

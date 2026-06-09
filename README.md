@@ -16,12 +16,15 @@ landed its first Phase 2A model-integration run:
 - compare them against multilingual baselines (XLM-R, mBERT, mT5) in one unified fertility experiment JSON
 - fine-tune base LLMs with the Akan TTS tokenizer via QLoRA on Kaggle/T4 across a model
   ladder — `Qwen/Qwen3-0.6B` (2A1), `Qwen/Qwen3-1.7B` (2A2, scale), `google/gemma-3-1b-pt`
-  (2A3, family + 256k vocab), all completed: **~45–50% fewer tokens/word** than the base
-  tokenizer, with coherent Twi generation. With mean-of-subword embedding init the fine-tuned
-  model beats every base on bits-per-byte (2A1: 0.932 vs 1.101; 2A2: 0.907 vs 1.031; 2A3:
-  0.896 vs 1.389). Key findings: at 1.7B the stronger base means *random* init no longer wins
-  (only mean-of-subword does); the tokenization tax survives even Gemma's 256k multilingual
-  vocab, so it's not a small-vocab or single-family artifact
+  (2A3, family + 256k vocab), `meta-llama/Llama-3.2-1B` (2A4, English-centric), all completed:
+  **~45–59% fewer tokens/word** than the base tokenizer, with coherent Twi generation. With
+  mean-of-subword embedding init the fine-tuned model converges to ~0.90 bits-per-byte on every
+  rung (2A1: 0.932, 2A2: 0.907, 2A3: 0.896, 2A4: 0.897) while the *bases* range from 0.769 to
+  1.389. Key findings: at 1.7B the stronger base means *random* init no longer wins (only
+  mean-of-subword does); the tokenization tax survives even Gemma's 256k multilingual vocab
+  (not a small-vocab or single-family artifact); and on English-centric Llama — whose base is
+  the best per-byte (0.769, likely an English confound in the Twi-English eval) — the swap is a
+  **trade**: the largest efficiency win (59%) for a small per-byte quality cost, not a uniform win
 
 > **Looking for the full plan?** [`project.md`](project.md) is the authoritative
 > project reference — research design, milestones, model ladder, file contracts, and
@@ -206,11 +209,12 @@ Akan-BPE/
 - [x] Phase 2A1: Qwen3-0.6B QLoRA fine-tune with Akan TTS tokenizer on Kaggle/T4 (50.3% fertility reduction)
 - [x] Phase 2A2: Qwen3-1.7B QLoRA scale step on Kaggle/T4 (mean-subword BPB 0.907 vs base 1.031; random-init loses to base at this scale)
 - [x] Phase 2A3: Gemma-3-1B QLoRA family + 256k-vocab step on Kaggle/T4 (44.9% fertility reduction; mean-subword BPB 0.896 vs weak base 1.389 — largest per-byte win; not a Qwen quirk)
+- [x] Phase 2A4: Llama-3.2-1B QLoRA English-centric step on Kaggle/T4 (59.0% fertility reduction — biggest tax; first rung where the fine-tune does *not* beat the base on BPB, 0.897 vs unusually low base 0.769 — likely an English confound; a trade, not a uniform win)
 - [x] **M2** methodology hardening:
   - [x] bits-per-byte (BPB) metric — base vs experiment model on the same eval bytes (`akan_bpe/model_integration.py`)
   - [x] embedding-init ablation — `--embedding-init-mode {random,mean_subword}`; on 2A1, mean-of-subword init wins (BPB 0.932 vs random 1.079, perplexity 45.4 vs 82.7) and is now the ladder default
   - [x] regenerated ASR test split — full WaxalNLP stream re-split to 8,085/1,011/1,011 (was a 1-sample test); ASR + mixed tokenizers and router retrained, benchmark re-run; `scripts/download.py` now fails loudly on a truncated split
-- [ ] **M3** model evidence: 5 runs across families/scales (Qwen3-0.6B ✅, Qwen3-1.7B ✅, Gemma-3-1B ✅, Llama-3.2-1B, tiny-aya-base) reported in BPB
+- [ ] **M3** model evidence: 5 runs across families/scales (Qwen3-0.6B ✅, Qwen3-1.7B ✅, Gemma-3-1B ✅, Llama-3.2-1B ✅, tiny-aya-base) reported in BPB
 - [ ] **M4** generation quality: chrF on held-out Twi
 - [ ] **M5** write & submit (AfricaNLP / WiNLP workshop)
 

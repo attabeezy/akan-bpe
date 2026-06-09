@@ -176,7 +176,7 @@ The active scope is tokenizer + routing experiments.
 
 **In progress / next phases (per the §0 paper plan):**
 - Methodology hardening (M2) — add bits-per-byte eval, embedding-init ablation, fix the ASR test split. **Do before more model runs.**
-- Model integration (M3) — 2A1–2A4 complete (Kaggle/T4). 2A1 (Qwen3-0.6B): 50.3% fertility reduction; mean-subword 0.932 BPB vs base 1.101 — see report §8.1. 2A2 (Qwen3-1.7B, scale step): stronger 1.031 base means random-init loses to base (−0.046), mean-subword wins at 0.907 (+0.125) — see report §9. 2A3 (Gemma-3-1B, family/256k-vocab step): tax survives a 256k vocab (44.9% reduction), weak Gemma base (1.389 BPB) → mean-subword 0.896 (+0.493, largest win) — see report §10. 2A4 (Llama-3.2-1B, English-centric step): biggest tax (59.0% reduction) but first rung where the fine-tune does NOT beat the base on BPB (0.897 vs unusually low base 0.769 — likely English confound in the Twi-English eval); a trade, not a uniform win — see report §11. The fine-tune converges to ~0.90 BPB on every rung; only the base varies. Last: tiny-aya-base (see §0.3 M3).
+- Model integration (M3) — 2A1–2A4 complete (Kaggle/T4). 2A1 (Qwen3-0.6B): 50.3% fertility reduction; mean-subword 0.932 BPB vs base 1.101 — see report §8.1. 2A2 (Qwen3-1.7B, scale step): stronger 1.031 base means random-init loses to base (−0.046), mean-subword wins at 0.907 (+0.125) — see report §9. 2A3 (Gemma-3-1B, family/256k-vocab step): tax survives a 256k vocab (44.9% reduction), weak Gemma base (1.389 BPB) → mean-subword 0.896 (+0.493, largest win) — see report §10. 2A4 (Llama-3.2-1B, English-centric step): biggest tax (59.0% reduction) but first rung where the fine-tune does NOT beat the base on BPB (0.897 vs unusually low base 0.769 — an outlier; eval is Twi-only but code-switched, so English-friendly bytes may cheapen an English-centric base — to quantify); a trade, not a uniform win — see report §11. The fine-tune converges to ~0.90 BPB on every rung; only the base varies. Last: tiny-aya-base (see §0.3 M3).
 - Generation quality (M4) — chrF on held-out Twi continuations.
 - Edge deployment — optional for the paper (light latency note if cheap); full GGUF + Dell Latitude 7400 benchmarking is deferred to future work.
 
@@ -536,10 +536,15 @@ the ladder — **59.0% fertility reduction** (3.073 → 1.259), as predicted for
 tokenizer. But this is the **first rung where the Akan fine-tune does not beat the base on BPB**:
 Llama's base scores an unusually low **0.7685 BPB** (best of all bases) and even mean-of-subword
 (0.8966) lands above it (−0.1281; random −0.2672). The fine-tuned BPB (~0.90) is in line with every
-other rung — the **base** is the outlier. Likely an **English confound**: the `pristine-twi-english`
-eval contains English that English-centric Llama models at very low BPB, dragging aggregate base BPB
-down. Follow-up: language-tag the eval and re-score BPB on the Twi-only subset. The 59% efficiency
-gain and the within-run ablation are unaffected; honest framing is a *trade*, not a uniform win. See
+other rung — the **base** is the outlier. **Data note:** `pristine-twi-english` is a Twi–English
+*parallel-pair* corpus, and `_detect_pristine_text` (`scripts/download.py`) extracts **only the Twi
+side** into the scored text — so the eval is **Twi-only, not a Twi+English mix**. But that Twi is
+heavily **code-switched** (English NEs, loanwords, numerals, Latin spans), so an English-centric
+byte-level model may predict those English-friendly bytes cheaply and pull base BPB down — a
+*contributing hypothesis*, not a settled explanation (unlikely to fully account for 0.769 vs Gemma
+1.389). Follow-up: quantify the Latin/code-switch byte fraction and break base BPB down by character
+class (or score a low-code-switch Twi subset). The 59% efficiency gain and the within-run ablation
+are unaffected; honest framing is a *trade*, not a uniform win. See
 `notebooks/2a4_llama-3.2-1b_tts.ipynb` and `report.md` §11.
 
 Next step is 2A5 (`CohereLabs/tiny-aya-base`) — the final rung.
@@ -606,7 +611,7 @@ aya-expanse-8b) is deferred to future work.
 | **2A1 ✅** | `Qwen/Qwen3-0.6B` | First real Kaggle/T4 QLoRA run: tokenizer replacement, embedding resize, train/eval, generation, save/load verification — **done** (50.3% fertility reduction, perplexity 82.65, BPB 1.079 vs base 1.101; mean-subword init ablation 0.932 BPB) | Feasible — completed |
 | **2A2 ✅** | `Qwen/Qwen3-1.7B` | Scale step (config clone of 2A1) — **done** (50.3% fertility reduction, perplexity 40.88, BPB 0.907 vs base 1.031 with mean-subword init; random-init loses to base at this scale, −0.046 BPB — see report §9) | Feasible — completed |
 | **2A3 ✅** | `google/gemma-3-1b-pt` | Family + 256k-vocab step — **done** (44.9% fertility reduction; weak Gemma base 1.389 BPB → mean-subword 0.896, +0.493 — largest per-byte win, tax survives a 256k vocab; both arms beat the weak base — see report §10) | Feasible — completed |
-| **2A4 ✅** | `meta-llama/Llama-3.2-1B` | English-centric, deployment-standard step — **done** (59.0% fertility reduction — biggest tax; first rung where the fine-tune does NOT beat the base on BPB: mean-subword 0.897 vs unusually low base 0.769, −0.128 — likely English confound in the Twi-English eval; a trade, not a uniform win — see report §11) | Feasible — completed |
+| **2A4 ✅** | `meta-llama/Llama-3.2-1B` | English-centric, deployment-standard step — **done** (59.0% fertility reduction — biggest tax; first rung where the fine-tune does NOT beat the base on BPB: mean-subword 0.897 vs unusually low base 0.769, −0.128 — base outlier; Twi-only but code-switched eval, English-friendly bytes to quantify; a trade, not a uniform win — see report §11) | Feasible — completed |
 | **2A5** | `CohereLabs/tiny-aya-earth` | Africa/West Asia-focused multilingual experiment | QLoRA-only; CC-BY-NC research/non-commercial license |
 | **2A6** | `microsoft/Phi-4-mini-instruct` or `CohereLabs/aya-expanse-8b` | Stretch/reference tier: Phi for edge-quality upper bound, Aya Expanse for multilingual reference | Phi QLoRA stretch; Aya Expanse inference/reference-only |
 
@@ -681,9 +686,12 @@ English-centric rung delivered the **biggest tax** as predicted (59.0% fertility
 3.073 tokens/word), but also the ladder's first **negative BPB**: Llama's base is an outlier at
 **0.7685 BPB** (best of all bases) and even mean-of-subword (0.8966) lands above it (−0.1281). The
 fine-tuned BPB (~0.90) matches every other rung — the base is what differs. **Open follow-up:** the
-low Llama base BPB is likely an **English confound** (the `pristine-twi-english` eval mixes English,
-which English-centric Llama models cheaply); language-tag the eval and re-score BPB on the Twi-only
-subset before citing the −0.128 as a clean "tokenizer loses" result.
+low Llama base BPB is an **unexplained outlier**. The eval is **Twi-only** (`_detect_pristine_text`
+takes the Twi side of the Twi–English pairs — *not* a Twi+English mix), but the Twi is heavily
+**code-switched**, so English-friendly bytes (NEs, loanwords, numerals, Latin spans) may cheapen an
+English-centric base's BPB. Quantify the Latin/code-switch byte fraction and break base BPB down by
+character class (or score a low-code-switch subset) before citing the −0.128 as a clean "tokenizer
+loses" result.
 
 #### 16.1.4 Phase 2A5 — next actions (`CohereLabs/tiny-aya-base`) — final rung
 
@@ -769,7 +777,7 @@ Phase 1 (DONE)
     │       ├── 2A1 Qwen3-0.6B (DONE)
     │       ├── 2A2 Qwen3-1.7B (DONE — scale step)
     │       ├── 2A3 Gemma-3-1B (DONE — multilingual, 256k vocab)
-    │       ├── 2A4 Llama-3.2-1B (DONE — English-centric; negative BPB, English confound to check)
+    │       ├── 2A4 Llama-3.2-1B (DONE — English-centric; negative BPB, base-outlier/code-switch to check)
     │       └── 2A5 tiny-aya-base (NEXT/LAST — Africa-aware, 3.35B, custom arch)
     └── M4 Generation quality (chrF on held-out Twi)
     └── M5 Write & submit (AfricaNLP/WiNLP)

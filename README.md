@@ -23,8 +23,9 @@ landed its first Phase 2A model-integration run:
   1.389. Key findings: at 1.7B the stronger base means *random* init no longer wins (only
   mean-of-subword does); the tokenization tax survives even Gemma's 256k multilingual vocab
   (not a small-vocab or single-family artifact); and on English-centric Llama — whose base is
-  the best per-byte (0.769, likely an English confound in the Twi-English eval) — the swap is a
-  **trade**: the largest efficiency win (59%) for a small per-byte quality cost, not a uniform win
+  an outlier at 0.769 per-byte (the Twi-only eval is heavily code-switched, so English-friendly
+  bytes may cheapen an English-centric base — to be quantified) — the swap is a **trade**: the
+  largest efficiency win (59%) for a small per-byte quality cost, not a uniform win
 
 > **Looking for the full plan?** [`project.md`](project.md) is the authoritative
 > project reference — research design, milestones, model ladder, file contracts, and
@@ -209,7 +210,7 @@ Akan-BPE/
 - [x] Phase 2A1: Qwen3-0.6B QLoRA fine-tune with Akan TTS tokenizer on Kaggle/T4 (50.3% fertility reduction)
 - [x] Phase 2A2: Qwen3-1.7B QLoRA scale step on Kaggle/T4 (mean-subword BPB 0.907 vs base 1.031; random-init loses to base at this scale)
 - [x] Phase 2A3: Gemma-3-1B QLoRA family + 256k-vocab step on Kaggle/T4 (44.9% fertility reduction; mean-subword BPB 0.896 vs weak base 1.389 — largest per-byte win; not a Qwen quirk)
-- [x] Phase 2A4: Llama-3.2-1B QLoRA English-centric step on Kaggle/T4 (59.0% fertility reduction — biggest tax; first rung where the fine-tune does *not* beat the base on BPB, 0.897 vs unusually low base 0.769 — likely an English confound; a trade, not a uniform win)
+- [x] Phase 2A4: Llama-3.2-1B QLoRA English-centric step on Kaggle/T4 (59.0% fertility reduction — biggest tax; first rung where the fine-tune does *not* beat the base on BPB, 0.897 vs unusually low base 0.769 — a base outlier; eval is Twi-only but code-switched, English-friendly bytes to quantify; a trade, not a uniform win)
 - [x] **M2** methodology hardening:
   - [x] bits-per-byte (BPB) metric — base vs experiment model on the same eval bytes (`akan_bpe/model_integration.py`)
   - [x] embedding-init ablation — `--embedding-init-mode {random,mean_subword}`; on 2A1, mean-of-subword init wins (BPB 0.932 vs random 1.079, perplexity 45.4 vs 82.7) and is now the ladder default

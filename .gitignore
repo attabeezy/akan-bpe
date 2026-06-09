@@ -33,4 +33,4 @@ logs/
 
 # Experiments
 # (results/*.json are generated - not tracked)
-report.md
+docs/

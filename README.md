@@ -8,9 +8,6 @@ LLM tokenizers impose on low-resource languages. The repo trains Akan tokenizers
 their fertility against multilingual baselines, and fine-tunes base LLMs with the Akan
 tokenizer via QLoRA — measuring the gain in **bits-per-byte**, a tokenizer-agnostic metric.
 
-See [`docs/project.md`](docs/project.md) for the full research plan and
-[`docs/report.md`](docs/report.md) for the technical report.
-
 ## Data Sources
 
 | Stream | Source | Notes |
@@ -68,7 +65,6 @@ akan-bpe/
 ├── scripts/         # download, train_bpe, benchmark_fertility, router, model_integration
 ├── notebooks/       # run-<model>.ipynb ladder runs + train_eval walkthrough
 ├── tests/
-├── docs/            # project.md + report.md — local reference docs (gitignored)
 └── pyproject.toml
 ```
 
@@ -83,8 +79,6 @@ Datasets, model artifacts, and results are generated locally and gitignored.
 - [ ] Re-score the ladder under the corrected BPB metric
 - [ ] Generation quality (chrF on held-out Twi)
 - [ ] Workshop write-up (AfricaNLP / WiNLP)
-
-Full milestones and locked decisions live in [`docs/project.md`](docs/project.md).
 
 ## License
 

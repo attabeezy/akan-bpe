@@ -1,4 +1,4 @@
-"""Helpers for Phase 2 model-integration experiments."""
+"""Helpers for the model-integration experiments (QLoRA + Akan tokenizer swap)."""
 
 from __future__ import annotations
 
@@ -74,7 +74,7 @@ class ModelIntegrationConfig:
     # Embedding initialization for the swapped-in Akan vocabulary. "random" keeps
     # whatever resize_token_embeddings produces; "mean_subword" initializes each
     # Akan-vocab row from the mean of the base model's subword embeddings for that
-    # token's surface string (the Phase 2A modeling contribution).
+    # token's surface string (the embedding-init modeling contribution).
     embedding_init_mode: str = "random"
     # When True, also load the unmodified base model and compute its bits-per-byte
     # on the same eval bytes for an honest cross-tokenizer comparison. Disable to
@@ -232,45 +232,124 @@ def compute_token_count_comparison(
     }
 
 
-def compute_model_bpb(
+def compute_model_bpb_full(
     model: Any,
-    eval_dataset: Dataset,
-    total_bytes: int,
+    texts: list[str],
+    tokenizer: Any,
     torch: Any,
+    chunk_size: int = 256,
 ) -> BpbResult:
-    """Compute bits-per-byte for a causal LM over an eval dataset.
+    """Compute bits-per-byte with full byte coverage (no truncation).
 
-    Sums the per-token negative log-likelihood (in nats) across the dataset using
-    an explicit causal shift and a sum-reduction cross-entropy over non-masked
-    label positions, then converts to bits and divides by ``total_bytes``. The
-    byte count is tokenizer-independent, so the result is comparable across models
-    that use different tokenizers.
+    Each text is tokenized in full and scored in consecutive, non-overlapping
+    ``chunk_size`` token chunks, so 100% of every text's bytes appear in the
+    denominator. This is the honest cross-tokenizer metric: a higher-fertility
+    tokenizer no longer has its tail silently dropped, so its BPB is not
+    deflated relative to a lower-fertility one. The byte count is
+    tokenizer-independent, keeping base and experiment directly comparable.
+
+    Chunk boundaries lose left-context for ~1/chunk_size of targets (cold start);
+    this is small and symmetric across models. Single-token final chunks are
+    skipped (they carry no target). Use ``compute_model_bpb_sliding`` for a
+    strided alternative that removes the cold-start entirely.
+    """
+    cross_entropy = torch.nn.CrossEntropyLoss(reduction="sum")
+    total_nll_nats = 0.0
+    num_target_tokens = 0
+    eos_id = tokenizer.eos_token_id
+    model.eval()
+    with torch.no_grad():
+        for text in texts:
+            ids = tokenizer(text, add_special_tokens=False)["input_ids"]
+            if eos_id is not None:
+                ids = ids + [eos_id]
+            for start in range(0, len(ids), chunk_size):
+                chunk = ids[start : start + chunk_size]
+                if len(chunk) < 2:
+                    continue  # lone final token has no target
+                input_ids = torch.tensor([chunk], device=model.device)
+                outputs = model(input_ids=input_ids)
+                # Shift so token t predicts token t+1 (standard causal alignment).
+                shift_logits = outputs.logits[:, :-1, :]
+                shift_labels = input_ids[:, 1:]
+                loss = cross_entropy(
+                    shift_logits.reshape(-1, shift_logits.size(-1)).float(),
+                    shift_labels.reshape(-1),
+                )
+                total_nll_nats += float(loss.item())
+                num_target_tokens += int(shift_labels.numel())
+
+    total_bytes = count_utf8_bytes(texts)
+    return BpbResult(
+        bits_per_byte=bits_per_byte(total_nll_nats, total_bytes),
+        total_nll_bits=total_nll_nats / math.log(2),
+        total_bytes=total_bytes,
+        num_target_tokens=num_target_tokens,
+    )
+
+
+def compute_model_bpb_sliding(
+    model: Any,
+    texts: list[str],
+    tokenizer: Any,
+    torch: Any,
+    window: int = 512,
+    stride: int = 256,
+) -> BpbResult:
+    """Full-coverage BPB via a strided sliding window; each target scored once.
+
+    Every new target has at least ``window - stride - 1`` tokens of left context
+    within its window, eliminating the chunk-boundary cold start of
+    ``compute_model_bpb_full``. 100% of bytes appear in the denominator and each
+    target position is counted exactly once (no double-counting). Slower than the
+    non-overlapping scorer; intended as a robustness cross-check.
     """
     cross_entropy = torch.nn.CrossEntropyLoss(reduction="sum", ignore_index=-100)
     total_nll_nats = 0.0
     num_target_tokens = 0
+    eos_id = tokenizer.eos_token_id
     model.eval()
     with torch.no_grad():
-        for row in eval_dataset:
-            input_ids = torch.tensor([row["input_ids"]], device=model.device)
-            attention_mask = torch.tensor([row["attention_mask"]], device=model.device)
-            labels = torch.tensor([row["labels"]], device=model.device)
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-            # Shift so token t predicts token t+1 (standard causal LM alignment).
-            shift_logits = outputs.logits[:, :-1, :]
-            shift_labels = labels[:, 1:]
-            loss = cross_entropy(
-                shift_logits.reshape(-1, shift_logits.size(-1)).float(),
-                shift_labels.reshape(-1),
-            )
-            total_nll_nats += float(loss.item())
-            num_target_tokens += int((shift_labels != -100).sum().item())
+        for text in texts:
+            ids = tokenizer(text, add_special_tokens=False)["input_ids"]
+            if eos_id is not None:
+                ids = ids + [eos_id]
+            n = len(ids)
+            if n < 2:
+                continue
+            # scored_end: exclusive upper bound of target positions already counted.
+            # Target positions in ids are [1, n); scored_end starts at 1.
+            scored_end = 1
+            for begin in range(0, n - 1, stride):
+                end = min(begin + window, n)
+                chunk = ids[begin:end]
+                if len(chunk) < 2:
+                    break
+                inp = torch.tensor([chunk], device=model.device)
+                outputs = model(input_ids=inp)
+                shift_logits = outputs.logits[:, :-1, :]
+                # shift_labels[0, j] is the target for ids[begin + j + 1].
+                shift_labels = inp[:, 1:].clone()
+                # Mask targets already counted in a previous window.
+                n_mask = max(0, scored_end - begin - 1)
+                if n_mask > 0:
+                    shift_labels[:, :n_mask] = -100
+                valid = int((shift_labels != -100).sum().item())
+                if valid > 0:
+                    loss = cross_entropy(
+                        shift_logits.reshape(-1, shift_logits.size(-1)).float(),
+                        shift_labels.reshape(-1),
+                    )
+                    total_nll_nats += float(loss.item())
+                    num_target_tokens += valid
+                scored_end = end
+                if end == n:
+                    break
 
-    bpb = bits_per_byte(total_nll_nats, total_bytes)
-    total_nll_bits = total_nll_nats / math.log(2)
+    total_bytes = count_utf8_bytes(texts)
     return BpbResult(
-        bits_per_byte=bpb,
-        total_nll_bits=total_nll_bits,
+        bits_per_byte=bits_per_byte(total_nll_nats, total_bytes),
+        total_nll_bits=total_nll_nats / math.log(2),
         total_bytes=total_bytes,
         num_target_tokens=num_target_tokens,
     )
@@ -304,7 +383,7 @@ def compute_bpb_metrics(
     config: ModelIntegrationConfig,
     runtime_model_id: str,
     experiment_model: Any,
-    experiment_eval_dataset: Dataset,
+    experiment_tokenizer: Any,
     eval_texts: list[str],
     auto_model_for_causal_lm: Any,
     torch: Any,
@@ -312,25 +391,30 @@ def compute_bpb_metrics(
 ) -> dict[str, object]:
     """Compute bits-per-byte for the fine-tuned model and (optionally) the base model.
 
-    Both models are scored on the same held-out bytes; because BPB normalizes by
-    UTF-8 byte count rather than token count, the two values are directly
-    comparable across the tokenizer swap.
+    Both models are scored with full byte coverage (``compute_model_bpb_full``) on
+    the same held-out texts: 100% of every text's bytes appear in the denominator,
+    so the comparison is honest even when the two tokenizers differ sharply in
+    fertility. Each model uses its own tokenizer but the byte count is
+    tokenizer-independent, keeping base and experiment directly comparable.
     """
     total_bytes = count_utf8_bytes(eval_texts)
-    experiment = compute_model_bpb(experiment_model, experiment_eval_dataset, total_bytes, torch)
+    experiment = compute_model_bpb_full(
+        experiment_model, eval_texts, experiment_tokenizer, torch, config.max_length
+    )
 
     base_result: BpbResult | None = None
     if config.compute_base_bpb:
         base_tokenizer: Any = AutoTokenizer.from_pretrained(runtime_model_id)
         if base_tokenizer.pad_token is None:
             base_tokenizer.pad_token = base_tokenizer.eos_token or base_tokenizer.unk_token
-        base_eval_dataset = build_text_dataset(eval_texts, base_tokenizer, config.max_length)
         base_model = _load_base_model_for_bpb(
             runtime_model_id, auto_model_for_causal_lm, torch, quantized
         )
         _set_model_token_config(base_model, base_tokenizer)
         try:
-            base_result = compute_model_bpb(base_model, base_eval_dataset, total_bytes, torch)
+            base_result = compute_model_bpb_full(
+                base_model, eval_texts, base_tokenizer, torch, config.max_length
+            )
         finally:
             del base_model
             if torch.cuda.is_available():
@@ -717,7 +801,7 @@ def _run_smoke_validation(
         config=config,
         runtime_model_id=runtime_model_id,
         experiment_model=model,
-        experiment_eval_dataset=eval_dataset,
+        experiment_tokenizer=tokenizer,
         eval_texts=eval_texts,
         auto_model_for_causal_lm=auto_model_for_causal_lm,
         torch=torch,
@@ -888,7 +972,7 @@ def run_model_integration(config: ModelIntegrationConfig) -> dict[str, object]:
         config=config,
         runtime_model_id=runtime_model_id,
         experiment_model=model,
-        experiment_eval_dataset=eval_dataset,
+        experiment_tokenizer=tokenizer,
         eval_texts=eval_texts,
         auto_model_for_causal_lm=auto_model_for_causal_lm,
         torch=torch,

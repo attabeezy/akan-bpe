@@ -628,7 +628,7 @@ def _import_runtime_stack() -> dict[str, Any]:
     except ImportError as exc:
         raise ImportError(
             "Model integration requires torch and transformers. "
-            'Install them with `pip install -e ".[train]"` for full training support.'
+            'Install them with `uv pip install -e ".[train]"` for full training support.'
         ) from exc
 
     return {
@@ -652,7 +652,7 @@ def _import_training_stack() -> dict[str, Any]:
     except ImportError as exc:
         raise ImportError(
             "QLoRA model integration requires optional training dependencies. "
-            'Install them with `pip install -e ".[train]"` and add `bitsandbytes` for QLoRA.'
+            'Install them with `uv pip install -e ".[train]"` and add `bitsandbytes` for QLoRA.'
         ) from exc
 
     return {

@@ -18,9 +18,9 @@ tokenizer via QLoRA — measuring the gain in **bits-per-byte**, a tokenizer-agn
 ## Install
 
 ```bash
-pip install -e ".[dev]"            # library + tooling
-pip install -e ".[dev,train]"      # add for model integration (QLoRA)
-pip install bitsandbytes           # add for Colab/Kaggle QLoRA runs
+uv pip install -e ".[dev]"            # library + tooling
+uv pip install -e ".[dev,train]"      # add for model integration (QLoRA)
+uv pip install bitsandbytes           # add for Colab/Kaggle QLoRA runs
 ```
 
 Scripts import the `akan_bpe` package, so install it before running them.

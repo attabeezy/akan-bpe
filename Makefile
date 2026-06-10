@@ -5,10 +5,10 @@ VOCAB_SIZE ?= 8000
 EXPERIMENT_ID ?= tokenizer_fertility_experiment_001
 
 setup:
-	pip install -e ".[dev]"
+	uv pip install -e ".[dev]"
 
 sync:
-	pip install -e ".[dev]" --upgrade
+	uv pip install -e ".[dev]" --upgrade
 
 download:
 	python scripts/download.py --output-dir data

@@ -12,36 +12,69 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from akan_bpe.io import write_json
-from akan_bpe.model_integration import ModelIntegrationConfig, PeftConfigSpec, run_model_integration
+from akan_bpe.model_integration import (
+    DEFAULT_EVAL_FILE,
+    DEFAULT_SMOKE_MODEL_ID,
+    DEFAULT_TOKENIZER_PATH,
+    DEFAULT_TRAIN_FILE,
+    ModelIntegrationConfig,
+    PeftConfigSpec,
+    derive_experiment_id,
+    run_model_integration,
+)
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run one Akan-BPE model-integration experiment.")
-    parser.add_argument("--experiment-id", required=True, help="Stable identifier for this run.")
     parser.add_argument(
         "--model-id",
-        required=True,
-        help="Hugging Face model identifier. `colab-qlora` currently supports only Qwen/Qwen3-0.6B.",
+        default=None,
+        help="Hugging Face model identifier (e.g. Qwen/Qwen3-0.6B-Base). Required for "
+        "--device-mode colab-qlora; defaults to the tiny smoke model otherwise.",
     )
-    parser.add_argument("--tokenizer-path", required=True, help="Local tokenizer JSON path.")
-    parser.add_argument("--train-file", required=True, help="Training JSONL file.")
-    parser.add_argument("--eval-file", required=True, help="Evaluation JSONL file.")
-    parser.add_argument("--output-dir", required=True, help="Model/adapters output directory.")
+    parser.add_argument(
+        "--experiment-id",
+        default=None,
+        help="Stable run identifier. Defaults to a tag derived from the model id and "
+        "embedding-init mode, e.g. run-qwen-0.6b / run-qwen-0.6b-meansub.",
+    )
+    parser.add_argument(
+        "--tokenizer-path",
+        default=DEFAULT_TOKENIZER_PATH,
+        help=f"Local tokenizer JSON path. Defaults to {DEFAULT_TOKENIZER_PATH}.",
+    )
+    parser.add_argument(
+        "--train-file",
+        default=DEFAULT_TRAIN_FILE,
+        help=f"Training JSONL file. Defaults to {DEFAULT_TRAIN_FILE}.",
+    )
+    parser.add_argument(
+        "--eval-file",
+        default=DEFAULT_EVAL_FILE,
+        help=f"Evaluation JSONL file. Defaults to {DEFAULT_EVAL_FILE}.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        default=None,
+        help="Model/adapters output directory. Defaults to models/<experiment-id>.",
+    )
     parser.add_argument(
         "--results-output",
-        help="Optional JSON output path. Defaults to results/<experiment-id>.json.",
+        default=None,
+        help="JSON output path. Defaults to results/<experiment-id>.json.",
     )
     parser.add_argument(
         "--device-mode",
         choices=("smoke", "colab-qlora"),
-        default="smoke",
-        help="Execution mode for tiny-model pipeline validation or the Qwen/Qwen3-0.6B Colab QLoRA path.",
+        default="colab-qlora",
+        help="Execution mode: 'colab-qlora' runs a real QLoRA fine-tune (default); "
+        "'smoke' validates the pipeline on a tiny CPU model.",
     )
-    parser.add_argument("--max-train-samples", type=int, default=None, help="Optional train cap.")
-    parser.add_argument("--max-eval-samples", type=int, default=None, help="Optional eval cap.")
+    parser.add_argument("--max-train-samples", type=int, default=4096, help="Train cap.")
+    parser.add_argument("--max-eval-samples", type=int, default=512, help="Eval cap.")
     parser.add_argument("--max-length", type=int, default=256, help="Tokenizer sequence length.")
     parser.add_argument("--batch-size", type=int, default=1, help="Per-device batch size.")
-    parser.add_argument("--grad-accum", type=int, default=1, help="Gradient accumulation steps.")
+    parser.add_argument("--grad-accum", type=int, default=16, help="Gradient accumulation steps.")
     parser.add_argument("--epochs", type=float, default=1.0, help="Number of training epochs.")
     parser.add_argument(
         "--learning-rate",
@@ -88,7 +121,18 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    results_output = args.results_output or str(Path("results") / f"{args.experiment_id}.json")
+
+    model_id = args.model_id
+    if model_id is None:
+        if args.device_mode == "smoke":
+            model_id = DEFAULT_SMOKE_MODEL_ID
+        else:
+            raise SystemExit("--model-id is required for --device-mode colab-qlora.")
+
+    experiment_id = args.experiment_id or derive_experiment_id(model_id, args.embedding_init_mode)
+    output_dir = args.output_dir or str(Path("models") / experiment_id)
+    results_output = args.results_output or str(Path("results") / f"{experiment_id}.json")
+
     peft = PeftConfigSpec(
         rank=args.lora_r,
         alpha=args.lora_alpha,
@@ -98,12 +142,12 @@ def main() -> None:
         ),
     )
     config = ModelIntegrationConfig(
-        experiment_id=args.experiment_id,
-        model_id=args.model_id,
+        experiment_id=experiment_id,
+        model_id=model_id,
         tokenizer_path=args.tokenizer_path,
         train_file=args.train_file,
         eval_file=args.eval_file,
-        output_dir=args.output_dir,
+        output_dir=output_dir,
         results_output=results_output,
         device_mode=args.device_mode,
         max_train_samples=args.max_train_samples,
@@ -124,7 +168,7 @@ def main() -> None:
     payload = run_model_integration(config)
     write_json(Path(results_output), payload)
     print(f"Model integration results written to {results_output}")
-    print(f"Model artifacts saved to {args.output_dir}")
+    print(f"Model artifacts saved to {output_dir}")
 
 
 if __name__ == "__main__":

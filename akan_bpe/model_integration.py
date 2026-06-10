@@ -26,6 +26,44 @@ SUPPORTED_COLAB_QLORA_MODEL_IDS = (
 )
 VALID_EMBEDDING_INIT_MODES = ("random", "mean_subword")
 
+# Short, human-readable slug per supported base model. Used to derive run tags
+# (experiment ids, output dirs, result JSON names) so a run needs only --model-id.
+MODEL_SLUGS = {
+    "Qwen/Qwen3-0.6B": "qwen-0.6b",
+    "Qwen/Qwen3-0.6B-Base": "qwen-0.6b",
+    "Qwen/Qwen3-1.7B": "qwen-1.7b",
+    "Qwen/Qwen3-1.7B-Base": "qwen-1.7b",
+    "google/gemma-3-1b-pt": "gemma-1b",
+    "meta-llama/Llama-3.2-1B": "llama-1b",
+    "CohereLabs/tiny-aya-base": "aya-base",
+}
+
+# Standard input paths shared by every run; CLI flags override when needed.
+DEFAULT_TOKENIZER_PATH = "models/tts_tokenizer.json"
+DEFAULT_TRAIN_FILE = "data/pristine_twi_train.jsonl"
+DEFAULT_EVAL_FILE = "data/pristine_twi_test.jsonl"
+
+
+def model_slug(model_id: str) -> str:
+    """Return the short run slug for a model id, falling back to a sanitized id."""
+    if model_id in MODEL_SLUGS:
+        return MODEL_SLUGS[model_id]
+    # Fallback: last path segment, lowercased, non-alnum collapsed to hyphens.
+    tail = model_id.rsplit("/", 1)[-1].lower()
+    return "".join(ch if ch.isalnum() or ch == "." else "-" for ch in tail).strip("-")
+
+
+def derive_experiment_id(model_id: str, embedding_init_mode: str) -> str:
+    """Derive the run tag from model + embedding init, e.g. ``run-qwen-0.6b``.
+
+    The ``mean_subword`` arm gets a ``-meansub`` suffix so the two ablation arms
+    never collide on output dirs or result JSON paths.
+    """
+    tag = f"run-{model_slug(model_id)}"
+    if embedding_init_mode == "mean_subword":
+        tag += "-meansub"
+    return tag
+
 
 @dataclass(frozen=True)
 class PeftConfigSpec:

@@ -18,7 +18,7 @@ build/
 models/*.pt
 models/*.bin
 models/*.gguf
-models/phase2a*/
+models/run-*/
 models/checkpoints/
 # results are generated artifacts
 results/

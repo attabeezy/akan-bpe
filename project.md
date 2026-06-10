@@ -1,12 +1,12 @@
 # Akan-BPE — Project Reference
 **Eliminating the Tokenization Tax for Akan via BPE Tokenizer Experiments**
 
-**Status:** Phase 2A In Progress (v0.2.0) — M3 ladder complete (2A1–2A5 on Kaggle/T4); open item: truncation-corrected BPB re-score before per-byte numbers are final  
+**Status:** Model-integration phase in progress (v0.2.0) — M3 ladder of 5 runs complete on Kaggle/T4. The BPB truncation bug is now **fixed in the library** (full byte coverage); the per-byte numbers in this doc predate the fix and are **pending a ladder re-score**.  
 **Scope:** Akan (Twi), tokenizer experiments with ML routing  
 **Paper target:** AfricaNLP / WiNLP workshop (4–8 pages). The active plan is now driven by
 this submission — see §0 (Research Design & Road to Paper) for the locked decisions and the
 milestone road. §0 takes precedence where it tightens or narrows the longer Phase 2 plan below.  
-**Completed:** Tokenizer training, fertility benchmarks vs multilingual baselines, balanced mixed tokenizer, router with held-out eval, model-integration runs 2A1 (Qwen3-0.6B) + 2A2 (Qwen3-1.7B) with the Akan TTS tokenizer on Kaggle/T4  
+**Completed:** Tokenizer training, fertility benchmarks vs multilingual baselines, balanced mixed tokenizer, router with held-out eval, the 5-run model-integration ladder (run-qwen-0.6b … run-aya-base) with the Akan TTS tokenizer on Kaggle/T4  
 **Current hardware:** CPU (local) / Kaggle T4 (model integration)  
 **Next hardware:** Continued Colab/Kaggle GPU for the model ladder; Dell Latitude 7400 for edge deployment
 
@@ -25,7 +25,7 @@ eval, edge deployment as a hard prerequisite), **§0 wins**.
 | **Venue / scope** | AfricaNLP / WiNLP workshop, 4–8 pages |
 | **Downstream evidence** | Bits-per-byte (BPB) **plus** generation quality (chrF) |
 | **ASR scope** | Keep the dual-regime (ASR + TTS) story; **fix the ASR test split** first |
-| **Model evidence** | **5 runs across 4 model families + a scale step** (see §0.3 M3) — not the full 2A1–2A6 ladder |
+| **Model evidence** | **5 runs across 4 model families + a scale step** (see §0.3 M3) — not the full six-model ladder |
 | **Edge deployment (2B)** | Optional for the paper; a light latency note if cheap, otherwise future work |
 
 ### 0.2 Thesis
@@ -34,7 +34,7 @@ eval, edge deployment as a hard prerequisite), **§0 wins**.
 > survives transfer into a real LLM — yielding a more efficient, deployable model —
 > across model scales and families.
 
-Phase 1 supports clause 1 (intrinsic fertility). Phase 2A supports clause 2 (the gain holds
+Phase 1 supports clause 1 (intrinsic fertility). The model-integration phase supports clause 2 (the gain holds
 inside a model, measured fairly). A light edge/latency note grounds "efficient/deployable."
 
 ### 0.3 The road — 5 milestones
@@ -48,7 +48,7 @@ inside a model, measured fairly). A light edge/latency note grounds "efficient/d
    bytes (`eval.bpb` in the result JSON), so the cross-tokenizer claim is honest. `--skip-base-bpb`
    opts out of the second model load. Fertility is kept as the intrinsic metric; eval_loss/
    perplexity remain as a within-tokenizer training signal. *Highest-leverage fix — landed before
-   2A2 so the model runs do not need redoing.*
+   the model runs so they do not need redoing.*
 2. **Embedding-init ablation. ✅ Implemented.** `--embedding-init-mode {random,mean_subword}` on
    the model-integration CLI; `mean_subword` initializes each Akan-vocab row from the mean of the
    base model's subword embeddings for that token's surface string (the modeling contribution, see
@@ -70,13 +70,13 @@ criteria (defensible in the paper): (1) QLoRA-feasible on a free T4 for reproduc
 (5) a multilinguality spread from English-centric to Africa-purpose-built; (6) license
 transparency.
 
-| # | Model | Params | ~Base vocab | Axis / why it's in | License |
+| Run | Model | Params | ~Base vocab | Axis / why it's in | License |
 |---|---|---|---|---|---|
-| **2A1 ✅** | `Qwen/Qwen3-0.6B` | 0.6B | ~151k | Scale anchor (low); proven path | Apache-2.0 |
-| **2A2 ✅** | `Qwen/Qwen3-1.7B` | 1.7B | ~151k | Scale anchor (high) — **isolates scale**, family held constant | Apache-2.0 |
-| **2A3 ✅** | `google/gemma-3-1b-pt` | ~1B | ~256k | Multilingual + largest base vocab → tax survives *even* a 256k vocab | Gemma (gated) |
-| **2A4 ✅** | `meta-llama/Llama-3.2-1B` | ~1.2B | ~128k | English-centric → biggest tax/gain; deployment-standard, seeds Phase 2B | Llama (gated) |
-| **2A5 ✅** | `CohereLabs/tiny-aya-base` | 3.35B | TBD* | Africa-aware multilingual pretraining → does the gain hold *even here?* + GGUF edge tie-in | CC-BY-NC |
+| **run-qwen-0.6b ✅** | `Qwen/Qwen3-0.6B` | 0.6B | ~151k | Scale anchor (low); proven path | Apache-2.0 |
+| **run-qwen-1.7b ✅** | `Qwen/Qwen3-1.7B` | 1.7B | ~151k | Scale anchor (high) — **isolates scale**, family held constant | Apache-2.0 |
+| **run-gemma-1b ✅** | `google/gemma-3-1b-pt` | ~1B | ~256k | Multilingual + largest base vocab → tax survives *even* a 256k vocab | Gemma (gated) |
+| **run-llama-1b ✅** | `meta-llama/Llama-3.2-1B` | ~1.2B | ~128k | English-centric → biggest tax/gain; deployment-standard, seeds Phase 2B | Llama (gated) |
+| **run-aya-base ✅** | `CohereLabs/tiny-aya-base` | 3.35B | TBD* | Africa-aware multilingual pretraining → does the gain hold *even here?* + GGUF edge tie-in | CC-BY-NC |
 
 `*` Aya base-vocab size is not on the model card — **read it from the config before citing.**
 
@@ -98,7 +98,7 @@ samples. ≥2 seeds where T4 budget allows; single-seed is an acceptable, stated
 workshop tier. Both ASR and TTS tokenizers are evaluated now that the ASR split is real.
 
 **Run order — cheapest/safest first, so results bank before the risky run:**
-2A2 (config clone of 2A1) → 2A3 Gemma → 2A4 Llama → **2A5 Aya last** (heaviest at 3.35B *and*
+run-qwen-1.7b (config clone) → run-gemma-1b → run-llama-1b → **run-aya-base last** (heaviest at 3.35B *and*
 a custom Cohere architecture; its LoRA target-module names and the `colab-qlora` allowlist need
 a model-specific check — budget engineering time, it is not a config-only clone). If T4 time or
 the Aya integration bites, a complete 4-run paper still stands.
@@ -119,7 +119,7 @@ ladder + edge + cross-lingual). Figures from existing result JSON; code release 
 M2 (BPB + ASR split fix)  ← before any new model run, or they get redone
         ↓
 M3 (5 runs: Qwen3-0.6B✅ + Qwen3-1.7B✅ + Gemma-3-1B✅ + Llama-3.2-1B✅ + tiny-aya-base✅, in BPB) ✅
-   └─ open: truncation-corrected BPB re-score (notebooks/2a4_llama_eval_helper.ipynb)
+   └─ open: re-score the ladder with the corrected full-coverage BPB metric (now in the library)
         ↓
 M4 (chrF generation quality)
         ↓
@@ -128,7 +128,7 @@ M5 (write)
 
 ### 0.5 Explicitly deferred to future work (not in the paper)
 
-- The 2A6 stretch/reference tier: `microsoft/Phi-4-mini-instruct` (off-thesis, code/English-heavy,
+- The stretch/reference tier: `microsoft/Phi-4-mini-instruct` (off-thesis, code/English-heavy,
   QLoRA-stretch on a T4) and `CohereLabs/aya-expanse-8b` (8B + non-commercial, reference-only)
 - Phase 2B edge deployment as a full benchmark suite (Dell Latitude 7400)
 - Cross-lingual transfer, additional Akan domains, labeled-task (QA/instruction) evaluation
@@ -142,7 +142,7 @@ M5 (write)
 - **Aya config facts.** Read `tiny-aya-base`'s vocab size, hidden size, tied-embeddings flag, and
   LoRA target-module names from its config before it goes in any table or the `colab-qlora` path.
 - **Gated-model access.** Gemma and Llama are gated on Hugging Face — accept their licenses and
-  set up an HF token before the 2A3/2A4 runs.
+  set up an HF token before the run-gemma-1b / run-llama-1b runs.
 
 ---
 
@@ -177,7 +177,7 @@ The active scope is tokenizer + routing experiments.
 
 **In progress / next phases (per the §0 paper plan):**
 - Methodology hardening (M2) — add bits-per-byte eval, embedding-init ablation, fix the ASR test split. **Do before more model runs.**
-- Model integration (M3) — **complete, 2A1–2A5 (Kaggle/T4).** 2A1 (Qwen3-0.6B): 50.3% reduction; mean-subword 0.932 BPB vs base 1.101 — report §8.1. 2A2 (Qwen3-1.7B, scale): random-init loses to a stronger 1.031 base (−0.046), mean-subword wins 0.907 (+0.125) — §9. 2A3 (Gemma-3-1B, family/256k vocab): tax survives a 256k vocab (44.9%), weak Gemma base 1.389 → mean-subword 0.896 (+0.493, largest win) — §10. 2A4 (Llama-3.2-1B, English-centric): biggest tax (59.0%) but first negative BPB (0.897 vs unusually low base 0.769). 2A5 (tiny-aya-base, Africa-aware, **final**): tax holds for an Africa-built base (57.7%), mean-subword 0.895 vs base 0.878 (−0.017, break-even). **Key:** the fine-tune converges to ~0.90 BPB on all five rungs; the only two negative rungs (Llama, tiny-aya) are the two highest-base-fertility runs — the fingerprint of a **truncation bias** in the BPB metric (truncates at 256 tokens, divides by full bytes). Open item: truncation-corrected re-score (`notebooks/2a4_llama_eval_helper.ipynb`) before the per-byte numbers are final — see report §11–§12.
+- Model integration (M3) — **complete, 5 runs (Kaggle/T4).** run-qwen-0.6b (Qwen3-0.6B): 50.3% reduction; mean-subword 0.932 BPB vs base 1.101 — report §8.1. run-qwen-1.7b (Qwen3-1.7B, scale): random-init loses to a stronger 1.031 base (−0.046), mean-subword wins 0.907 (+0.125) — §9. run-gemma-1b (Gemma-3-1B, family/256k vocab): tax survives a 256k vocab (44.9%), weak Gemma base 1.389 → mean-subword 0.896 (+0.493, largest win) — §10. run-llama-1b (Llama-3.2-1B, English-centric): biggest tax (59.0%) but first negative BPB (0.897 vs unusually low base 0.769). run-aya-base (tiny-aya-base, Africa-aware, **final**): tax holds for an Africa-built base (57.7%), mean-subword 0.895 vs base 0.878 (−0.017, break-even). **Key:** the fine-tune converges to ~0.90 BPB on all five rungs; the only two negative rungs (Llama, tiny-aya) are the two highest-base-fertility runs — the fingerprint of a **truncation bias** in the original BPB metric (truncated at 256 tokens, divided by full bytes). **Now fixed in the library** (full byte coverage); per-byte numbers pending a ladder re-score — see report §11–§12.
 - Generation quality (M4) — chrF on held-out Twi continuations.
 - Edge deployment — optional for the paper (light latency note if cheap); full GGUF + Dell Latitude 7400 benchmarking is deferred to future work.
 
@@ -495,16 +495,21 @@ If basic A/B/C results are promising, the project can revisit staged corpus idea
 
 These should only be attempted after the simpler comparisons are complete.
 
-### 14.3 Model integration (IN PROGRESS — Phase 2A)
+### 14.3 Model integration (IN PROGRESS)
 
-Phase 2A1 is complete. The first real Colab QLoRA run executed end-to-end. The repo contains:
+> **Metric note:** the BPB numbers in this section were produced by the original
+> truncating metric. That bug is now fixed in the library (full byte coverage); the
+> figures below are **pending a ladder re-score** and are kept only for the relative
+> within-run story (fertility and embedding-init ablation, which are unaffected).
+
+The model-integration runs are complete. The first real Colab QLoRA run executed end-to-end. The repo contains:
 
 - `akan_bpe/model_integration.py` — dataset prep, tokenizer/model loading, token-count comparison, LoRA/QLoRA setup, eval, generation samples, JSON artifact creation
 - `scripts/model_integration.py` — CLI-driven experiment runner
-- `notebooks/2a1_qwen3-0.6b_tts.ipynb` — executed Colab/T4 run for `Qwen/Qwen3-0.6B` (outputs preserved in the notebook)
+- `notebooks/run-qwen-0.6b.ipynb` — executed Colab/T4 run for `Qwen/Qwen3-0.6B` (outputs preserved in the notebook)
 - `tests/test_model_integration.py` — CPU-safe orchestration and artifact-contract coverage
 
-**2A1 result (Qwen3-0.6B + Akan TTS tokenizer, QLoRA 4-bit nf4, Kaggle Tesla T4, 1 epoch):**
+**run-qwen-0.6b result (Qwen3-0.6B + Akan TTS tokenizer, QLoRA 4-bit nf4, Kaggle Tesla T4, 1 epoch):**
 
 - Base model tokenizer fertility: 2.530 tokens/word → Akan TTS tokenizer: 1.259 tokens/word (**50.3% reduction** on the eval set)
 - Eval loss 4.4146 / perplexity 82.65 (random embedding init)
@@ -515,24 +520,24 @@ Phase 2A1 is complete. The first real Colab QLoRA run executed end-to-end. The r
 beats random on every metric — BPB **0.9319 vs 1.0785**, perplexity **45.35 vs 82.65**, eval loss
 3.8144 vs 4.4146 — for zero extra training cost. Both arms beat the base model's 1.1008 BPB.
 `mean_subword` is adopted as the default embedding init for the M3 ladder. Both arms (and the BPB
-display) are reproduced in `notebooks/2a1_qwen3-0.6b_tts.ipynb`; see `report.md` §8.1.
+display) are reproduced in `notebooks/run-qwen-0.6b.ipynb`; see `report.md` §8.1.
 
-**2A2 result (Qwen3-1.7B, scale step — config clone, Kaggle Tesla T4, 1 epoch):** same 50.3%
+**run-qwen-1.7b result (Qwen3-1.7B, scale step — config clone, Kaggle Tesla T4, 1 epoch):** same 50.3%
 fertility reduction (shared Qwen3 tokenizer). The stronger 1.7B base scores **1.0313 BPB**, so the
 **random-init** arm (1.0777 BPB) *loses* to the base (−0.0464), but **mean-of-subword** still wins
 clearly at **0.9066 BPB** (perplexity 40.88, +0.1247 vs base). At scale, warm-start embedding init
-is what separates a winning run from a losing one. See `notebooks/2a2_qwen3-1.7b_tts.ipynb` and
+is what separates a winning run from a losing one. See `notebooks/run-qwen-1.7b.ipynb` and
 `report.md` §9.
 
-**2A3 result (Gemma-3-1b-pt, family + 256k-vocab step, Kaggle Tesla T4, 1 epoch):** a different
+**run-gemma-1b result (Gemma-3-1b-pt, family + 256k-vocab step, Kaggle Tesla T4, 1 epoch):** a different
 family with the ladder's largest base vocab. The tax survives even a 256k vocab — **44.9% fertility
 reduction** (2.284 → 1.259). Gemma's base is *weak* on Twi (**1.3889 BPB**, worse than either Qwen
 base), so **both** arms beat it: random 1.0918 (+0.2971), **mean-of-subword 0.8961** (perplexity
 39.17, **+0.4928** — the ladder's largest per-byte win). This kills the "Qwen quirk" objection and
-shows the tax is not an artifact of small vocab. See `notebooks/2a3_gemma-3-1b_tts.ipynb` and
+shows the tax is not an artifact of small vocab. See `notebooks/run-gemma-1b.ipynb` and
 `report.md` §10.
 
-**2A4 result (Llama-3.2-1B, English-centric step, Kaggle Tesla T4, 1 epoch):** the largest tax in
+**run-llama-1b result (Llama-3.2-1B, English-centric step, Kaggle Tesla T4, 1 epoch):** the largest tax in
 the ladder — **59.0% fertility reduction** (3.073 → 1.259), as predicted for an English-centric
 tokenizer. But this is the **first rung where the Akan fine-tune does not beat the base on BPB**:
 Llama's base scores an unusually low **0.7685 BPB** (best of all bases) and even mean-of-subword
@@ -542,25 +547,26 @@ other rung — the **base** is the outlier. **Data note:** `pristine-twi-english
 side** into the scored text — so the eval is **Twi-only, not a Twi+English mix**. But that Twi is
 heavily **code-switched** (English NEs, loanwords, numerals, Latin spans), so an English-centric
 byte-level model may predict those English-friendly bytes cheaply (a smaller secondary effect). But
-the **leading explanation is a truncation bias** in the BPB metric: `_build_causal_example` truncates
-each text to `max_length-1`=255 tokens while `compute_model_bpb` divides by the full byte count, so a
-high-fertility base tokenizer (Llama ~3.07 tok/word) scores only a short prefix of each paragraph and
-is credited with all its bytes → its base BPB is deflated most. 2A5 corroborates (below). The 59%
-efficiency gain and the within-run ablation are unaffected. See `notebooks/2a4_llama-3.2-1b_tts.ipynb`,
-the corrected re-eval in `notebooks/2a4_llama_eval_helper.ipynb`, and `report.md` §11.
+the **leading explanation was a truncation bias** in the original BPB metric: it truncated each text
+to `max_length-1`=255 tokens while dividing by the full byte count, so a high-fertility base tokenizer
+(Llama ~3.07 tok/word) scored only a short prefix of each paragraph yet was credited with all its
+bytes → its base BPB was deflated most. run-aya-base corroborates (below). **This metric is now fixed
+in the library** (`compute_model_bpb_full`, full byte coverage); the figure above is pre-fix and
+pending re-score. The 59% efficiency gain and the within-run ablation are unaffected. See
+`notebooks/run-llama-1b.ipynb` and `report.md` §11.
 
-**2A5 result (tiny-aya-base, Africa-aware step — final rung, Kaggle Tesla T4, 1 epoch):** the tax
+**run-aya-base result (tiny-aya-base, Africa-aware step — final rung, Kaggle Tesla T4, 1 epoch):** the tax
 holds even for an Africa-built base — **57.7% fertility reduction** (2.975 → 1.259). mean-of-subword
 reaches the ladder's consistent **0.8949 BPB** (perplexity 38.97); base BPB 0.8779, so the measured
 improvement is −0.0170 (random −0.1988) — **essentially break-even**. Crucially, tiny-aya and Llama
 are the ladder's **two highest-base-fertility runs (2.98, 3.07)** and the **only two** with a negative
-sign — the exact fingerprint of the truncation bias above. See `notebooks/2a5_tiny-aya-base_tts.ipynb`
+sign — the exact fingerprint of the truncation bias above. See `notebooks/run-aya-base.ipynb`
 and `report.md` §12.
 
-**M3 is complete (5 runs).** The 5-run BPB ladder is done. The one open item before the per-byte
-numbers are final is the **truncation-corrected re-score** (`notebooks/2a4_llama_eval_helper.ipynb`):
-if confirmed, fix `build_text_dataset`/`compute_model_bpb` to score full byte coverage and re-run the
-ladder. The fertility results and the embedding-init ablation are final.
+**M3 is complete (5 runs).** The 5-run BPB ladder is done. The truncation bias is now **fixed in the
+library** — `compute_bpb_metrics` scores both base and experiment with full byte coverage
+(`compute_model_bpb_full`). The remaining open item is to **re-run the ladder** so the per-byte numbers
+reflect the corrected metric. The fertility results and the embedding-init ablation are final.
 
 ### 14.4 Edge deployment
 
@@ -604,11 +610,11 @@ Phase 1 answered the tokenizer question. Phase 2 asks whether those gains transl
 
 **Goal:** Verify that fertility reduction translates into measurable downstream benefit — faster inference, lower perplexity, or better generation — not just a smaller token count.
 
-**Current status:** 2A1 + 2A2 are complete — QLoRA runs executed end-to-end on Kaggle/T4. 2A1 (`Qwen/Qwen3-0.6B`): 50.3% fertility reduction on the eval set, eval perplexity 82.65, BPB 1.079 vs base 1.101, coherent Twi generation, save/reload verified; mean-of-subword embedding-init ablation reaches 0.932 BPB / 45.4 ppl. 2A2 (`Qwen/Qwen3-1.7B`, scale step): mean-subword 0.907 BPB vs base 1.031 (random-init loses to base at this scale). The repo contains:
+**Current status:** all five runs are complete — QLoRA runs executed end-to-end on Kaggle/T4. run-qwen-0.6b (`Qwen/Qwen3-0.6B`): 50.3% fertility reduction on the eval set, eval perplexity 82.65, BPB 1.079 vs base 1.101, coherent Twi generation, save/reload verified; mean-of-subword embedding-init ablation reaches 0.932 BPB / 45.4 ppl. run-qwen-1.7b (`Qwen/Qwen3-1.7B`, scale step): mean-subword 0.907 BPB vs base 1.031 (random-init loses to base at this scale). (BPB figures pending re-score under the corrected metric.) The repo contains:
 
 - `akan_bpe/model_integration.py` for dataset prep, tokenizer/model loading, token-count comparison, LoRA/QLoRA setup, eval, generation samples, and JSON artifact creation
 - `scripts/model_integration.py` for one CLI-driven experiment run
-- `notebooks/2a1_qwen3-0.6b_tts.ipynb` — the executed Colab run (outputs preserved in-notebook; `results/` is gitignored)
+- `notebooks/run-qwen-0.6b.ipynb` — the executed Colab run (outputs preserved in-notebook; `results/` is gitignored)
 - `tests/test_model_integration.py` for CPU-safe orchestration and artifact-contract coverage
 
 **Hardware baseline:** Free Kaggle/Colab GPU, typically T4/P100-class. Train and evaluate the smaller models first; treat larger models as QLoRA-only or reference-only unless paid GPU access is available.
@@ -616,17 +622,19 @@ Phase 1 answered the tokenizer question. Phase 2 asks whether those gains transl
 **Model ladder (background — see §0.3 M3 for the authoritative paper set):** The paper runs a
 **5-model set** — Qwen3-0.6B, Qwen3-1.7B, Gemma-3-1B, Llama-3.2-1B, and tiny-aya-base — chosen
 to span scale, family, base-vocab size, and multilinguality. The original six-rung ladder below
-remains as a longer-term map; only the **2A6 stretch/reference tier** (Phi-4-mini,
+remains as a longer-term map; only the **stretch/reference tier** (Phi-4-mini,
 aya-expanse-8b) is deferred to future work.
 
-| Phase | Model | Role | Free-GPU feasibility |
+> BPB figures in this table predate the metric fix and are **pending re-score**.
+
+| Run | Model | Role | Free-GPU feasibility |
 |---|---|---|---|
-| **2A1 ✅** | `Qwen/Qwen3-0.6B` | First real Kaggle/T4 QLoRA run: tokenizer replacement, embedding resize, train/eval, generation, save/load verification — **done** (50.3% fertility reduction, perplexity 82.65, BPB 1.079 vs base 1.101; mean-subword init ablation 0.932 BPB) | Feasible — completed |
-| **2A2 ✅** | `Qwen/Qwen3-1.7B` | Scale step (config clone of 2A1) — **done** (50.3% fertility reduction, perplexity 40.88, BPB 0.907 vs base 1.031 with mean-subword init; random-init loses to base at this scale, −0.046 BPB — see report §9) | Feasible — completed |
-| **2A3 ✅** | `google/gemma-3-1b-pt` | Family + 256k-vocab step — **done** (44.9% fertility reduction; weak Gemma base 1.389 BPB → mean-subword 0.896, +0.493 — largest per-byte win, tax survives a 256k vocab; both arms beat the weak base — see report §10) | Feasible — completed |
-| **2A4 ✅** | `meta-llama/Llama-3.2-1B` | English-centric, deployment-standard step — **done** (59.0% fertility reduction — biggest tax; first negative BPB: mean-subword 0.897 vs unusually low base 0.769, −0.128 — very likely a truncation artifact, see report §11) | Feasible — completed |
-| **2A5 ✅** | `CohereLabs/tiny-aya-base` | Africa-aware step — **final rung, done** (57.7% fertility reduction; mean-subword 0.895 vs base 0.878, −0.017 break-even; one of the two highest-base-fertility, negative-sign rungs that fingerprint the truncation bias — see report §12) | Feasible — completed |
-| **2A6** | `microsoft/Phi-4-mini-instruct` or `CohereLabs/aya-expanse-8b` | Stretch/reference tier: Phi for edge-quality upper bound, Aya Expanse for multilingual reference | Phi QLoRA stretch; Aya Expanse inference/reference-only |
+| **run-qwen-0.6b ✅** | `Qwen/Qwen3-0.6B` | First real Kaggle/T4 QLoRA run: tokenizer replacement, embedding resize, train/eval, generation, save/load verification — **done** (50.3% fertility reduction, perplexity 82.65, BPB 1.079 vs base 1.101; mean-subword init ablation 0.932 BPB) | Feasible — completed |
+| **run-qwen-1.7b ✅** | `Qwen/Qwen3-1.7B` | Scale step (config clone) — **done** (50.3% fertility reduction, perplexity 40.88, BPB 0.907 vs base 1.031 with mean-subword init; random-init loses to base at this scale, −0.046 BPB — see report §9) | Feasible — completed |
+| **run-gemma-1b ✅** | `google/gemma-3-1b-pt` | Family + 256k-vocab step — **done** (44.9% fertility reduction; weak Gemma base 1.389 BPB → mean-subword 0.896, +0.493 — largest per-byte win, tax survives a 256k vocab; both arms beat the weak base — see report §10) | Feasible — completed |
+| **run-llama-1b ✅** | `meta-llama/Llama-3.2-1B` | English-centric, deployment-standard step — **done** (59.0% fertility reduction — biggest tax; first negative BPB: mean-subword 0.897 vs unusually low base 0.769, −0.128 — a truncation artifact, now fixed in the library, see report §11) | Feasible — completed |
+| **run-aya-base ✅** | `CohereLabs/tiny-aya-base` | Africa-aware step — **final rung, done** (57.7% fertility reduction; mean-subword 0.895 vs base 0.878, −0.017 break-even; one of the two highest-base-fertility, negative-sign rungs that fingerprint the truncation bias — see report §12) | Feasible — completed |
+| **stretch tier** | `microsoft/Phi-4-mini-instruct` or `CohereLabs/aya-expanse-8b` | Stretch/reference tier: Phi for edge-quality upper bound, Aya Expanse for multilingual reference | Phi QLoRA stretch; Aya Expanse inference/reference-only |
 
 `Qwen2.5-0.5B` remains a fallback only if Qwen3 tooling causes friction. Tiny Aya Earth replaces Aya Expanse 8B as the primary Aya-family candidate because it is smaller, Africa/West Asia-focused, and designed for local deployment under realistic compute constraints.
 
@@ -662,7 +670,7 @@ aya-expanse-8b) is deferred to future work.
 
 6. **Record experiment output** — save one structured JSON per run under `results/`, including model ID, tokenizer path, dataset paths, fertility, perplexity, generation samples, timing, hardware, and memory notes.
 
-**First real run path:** Use `notebooks/2a1_qwen3-0.6b_tts.ipynb` to install `.[dev,train]` plus `bitsandbytes`, verify `data/pristine_twi_train.jsonl`, `data/pristine_twi_test.jsonl`, and `models/tts_tokenizer.json`, then call `scripts/model_integration.py` in `colab-qlora` mode.
+**First real run path:** Use `notebooks/run-qwen-0.6b.ipynb` to install `.[dev,train]` plus `bitsandbytes`, verify `data/pristine_twi_train.jsonl`, `data/pristine_twi_test.jsonl`, and `models/tts_tokenizer.json`, then call `scripts/model_integration.py` in `colab-qlora` mode.
 
 **Success criterion:** Fine-tuned model with new tokenizer matches or exceeds base model perplexity on Akan test text, with fewer tokens processed per sample.
 
@@ -672,9 +680,9 @@ that cover similar character sequences). For the paper this is promoted to a del
 **embedding-init ablation** (random vs mean-of-subword) — see §0.3 M2.2 — and is the modeling
 contribution rather than just a risk to monitor.
 
-#### 16.1.1 Phase 2A2 — ✅ done (`Qwen/Qwen3-1.7B`)
+#### 16.1.1 run-qwen-1.7b — ✅ done (`Qwen/Qwen3-1.7B`)
 
-Completed on Kaggle/T4 (`notebooks/2a2_qwen3-1.7b_tts.ipynb`, see `report.md` §9). The 2A1
+Completed on Kaggle/T4 (`notebooks/run-qwen-1.7b.ipynb`, see `report.md` §9). The run-qwen-0.6b
 machinery cloned cleanly: allowlist extended to `Qwen/Qwen3-1.7B`, TTS tokenizer + dataset paths
 kept, `CUDA_VISIBLE_DEVICES=0` pinned to dodge the DataParallel + QLoRA crash on T4×2. Outcome:
 50.3% fertility reduction (shared Qwen3 tokenizer), mean-subword **0.9066 BPB vs base 1.0313**.
@@ -683,54 +691,53 @@ kept, `CUDA_VISIBLE_DEVICES=0` pinned to dodge the DataParallel + QLoRA crash on
 clearest evidence yet that the embedding-init ablation is the modeling contribution, not just a
 risk to monitor.
 
-#### 16.1.2 Phase 2A3 — ✅ done (`google/gemma-3-1b-pt`)
+#### 16.1.2 run-gemma-1b — ✅ done (`google/gemma-3-1b-pt`)
 
-Completed on Kaggle/T4 (`notebooks/2a3_gemma-3-1b_tts.ipynb`, see `report.md` §10). Different
+Completed on Kaggle/T4 (`notebooks/run-gemma-1b.ipynb`, see `report.md` §10). Different
 family, largest base vocab (~256k), PT checkpoint to avoid the SFT confound. Outcome: 44.9%
 fertility reduction (the tax survives a 256k vocab), and a *weak* Gemma Twi base (1.3889 BPB) →
-mean-subword **0.8961 BPB (+0.4928)**, the ladder's largest per-byte win. Unlike 2A2 both arms beat
+mean-subword **0.8961 BPB (+0.4928)**, the ladder's largest per-byte win. Unlike run-qwen-1.7b both arms beat
 the base here, because the base is weak — the size of the win tracks how poorly the base models Twi.
 Kills the "Qwen quirk" and "small-vocab artifact" objections in one rung.
 
-#### 16.1.3 Phase 2A4 — ✅ done (`meta-llama/Llama-3.2-1B`)
+#### 16.1.3 run-llama-1b — ✅ done (`meta-llama/Llama-3.2-1B`)
 
-Completed on Kaggle/T4 (`notebooks/2a4_llama-3.2-1b_tts.ipynb`, see `report.md` §11). The
+Completed on Kaggle/T4 (`notebooks/run-llama-1b.ipynb`, see `report.md` §11). The
 English-centric rung delivered the **biggest tax** as predicted (59.0% fertility reduction, base
 3.073 tokens/word), but also the ladder's first **negative BPB**: Llama's base is an outlier at
 **0.7685 BPB** (best of all bases) and even mean-of-subword (0.8966) lands above it (−0.1281). The
 fine-tuned BPB (~0.90) matches every other rung — the base is what differs. **Leading explanation:
-a truncation bias** in the BPB metric — `_build_causal_example` truncates each text to 255 tokens
-while `compute_model_bpb` divides by full bytes, so a high-fertility base tokenizer (Llama ~3.07
-tok/word) scores only a prefix of each paragraph yet is credited with all its bytes → base BPB
-deflated most. 2A5 corroborates (the two negative rungs are the two highest-fertility bases). A
-smaller secondary effect may come from code-switching (the Twi-only eval carries English NEs /
-loanwords / Latin spans). Resolution in §16.1.5.
+a truncation bias** in the original BPB metric — it truncated each text to 255 tokens while dividing
+by full bytes, so a high-fertility base tokenizer (Llama ~3.07 tok/word) scored only a prefix of each
+paragraph yet was credited with all its bytes → base BPB deflated most. run-aya-base corroborates (the
+two negative rungs are the two highest-fertility bases). A smaller secondary effect may come from
+code-switching (the Twi-only eval carries English NEs / loanwords / Latin spans). Now fixed in the
+library; see §16.1.5.
 
-#### 16.1.4 Phase 2A5 — ✅ done (`CohereLabs/tiny-aya-base`) — final rung, M3 complete
+#### 16.1.4 run-aya-base — ✅ done (`CohereLabs/tiny-aya-base`) — final rung, M3 complete
 
-Completed on Kaggle/T4 (`notebooks/2a5_tiny-aya-base_tts.ipynb`, see `report.md` §12). The
+Completed on Kaggle/T4 (`notebooks/run-aya-base.ipynb`, see `report.md` §12). The
 Africa-aware rung (3.35B, custom Cohere arch, run last). The tax holds even for an Africa-built base:
 **57.7% fertility reduction** (2.975 → 1.259); mean-of-subword reaches the ladder's consistent
 **0.8949 BPB** (perplexity 38.97) vs base 0.8779 → −0.0170 (break-even). Like Llama, both arms show a
 negative raw sign — and these two rungs are the **two highest-base-fertility** runs, the fingerprint
 of the truncation bias (§16.1.5). This **closes the 5-run M3 set.**
 
-#### 16.1.5 Truncation-corrected BPB re-score — open item before per-byte numbers are final
+#### 16.1.5 Truncation-corrected BPB — fixed in the library; ladder re-score pending
 
-The BPB metric truncates each text to `max_length-1` tokens but divides by the full byte count,
-deflating BPB for high-fertility base tokenizers most — the likely cause of the negative 2A4/2A5
-signs. Next actions:
+The original BPB metric truncated each text to `max_length-1` tokens but divided by the full byte
+count, deflating BPB for high-fertility base tokenizers most — the cause of the negative
+run-llama-1b / run-aya-base signs. Status:
 
-1. **Run the helper notebooks.** `notebooks/2a4_llama_eval_helper.ipynb` and
-   `notebooks/2a5_tiny_aya_eval_helper.ipynb` (retrain-in-session) quantify the truncation, reproduce
-   the 0.7685 / 0.8779 artifacts, and recompute base + retrained-adapter BPB with **full byte
-   coverage** (no truncation). Verdict: do the two negative rungs (Llama, tiny-aya) flip to a positive
-   corrected improvement?
-2. **If confirmed, fix the library.** Change `build_text_dataset` / `compute_model_bpb`
-   (`akan_bpe/model_integration.py`) to score full coverage (sliding-window / chunked), add a
-   regression test, then **re-run the 5-rung ladder** and update `report.md` §8–§12 + §10.1 with the
-   corrected BPB and improvements.
-3. **Unaffected.** The fertility reductions (45–59%) and the embedding-init ablation (mean_subword wins
+1. **Diagnosed.** Truncation diagnostics (now retired) showed the high-fertility bases scored only
+   ~30–40% of each text's bytes while being credited with 100%, exactly deflating their BPB.
+2. **Fixed in the library.** `compute_bpb_metrics` (`akan_bpe/model_integration.py`) now scores both
+   base and experiment with **full byte coverage** via `compute_model_bpb_full` (non-overlapping
+   chunks); `compute_model_bpb_sliding` is available as a cross-check. Every model is scored on 100%
+   of identical content, so high-fertility bases are no longer flattered.
+3. **Remaining open item: re-run the 5-rung ladder** with the corrected metric and update `report.md`
+   §8–§12 + §10.1 with the corrected BPB and improvements.
+4. **Unaffected.** The fertility reductions (45–59%) and the embedding-init ablation (mean_subword wins
    every rung) do not depend on the truncation fix and are final.
 
 **ASR test split — M2 fix, ✅ done.** The dual-regime (ASR + TTS) story is now statistically
@@ -795,20 +802,20 @@ Phase 1 (DONE)
     │       ├── Embedding-init ablation (random vs mean-of-subword)
     │       └── Fix ASR test split + re-run Phase 1 fertility benchmark
     └── M3 Model evidence (5 runs, reported in BPB; run cheapest/safest first)
-    │       ├── 2A1 Qwen3-0.6B (DONE)
-    │       ├── 2A2 Qwen3-1.7B (DONE — scale step)
-    │       ├── 2A3 Gemma-3-1B (DONE — multilingual, 256k vocab)
-    │       ├── 2A4 Llama-3.2-1B (DONE — English-centric; negative BPB, truncation-bias suspect)
-    │       └── 2A5 tiny-aya-base (DONE — Africa-aware, 3.35B; break-even, truncation-bias suspect) ✅ M3 complete
-    │           └── open: truncation-corrected BPB re-score (notebooks/2a4_llama_eval_helper.ipynb)
+    │       ├── run-qwen-0.6b (DONE)
+    │       ├── run-qwen-1.7b (DONE — scale step)
+    │       ├── run-gemma-1b (DONE — multilingual, 256k vocab)
+    │       ├── run-llama-1b (DONE — English-centric; negative BPB, truncation-bias suspect)
+    │       └── run-aya-base (DONE — Africa-aware, 3.35B; break-even, truncation-bias suspect) ✅ M3 complete
+    │           └── metric fixed in library (full byte coverage); open: ladder re-score
     └── M4 Generation quality (chrF on held-out Twi)
     └── M5 Write & submit (AfricaNLP/WiNLP)
 
 Deferred to future work:
-    ├── 2A6 stretch/reference tier (Phi-4-mini, aya-expanse-8b)
+    ├── stretch/reference tier (Phi-4-mini, aya-expanse-8b)
     └── Phase 2B edge deployment (full GGUF + Dell Latitude 7400 suite)
 ```
 
-Longer-term map (background): the full Phase 2A ladder runs 2A1→2A6, followed by Phase 2B
-(GGUF export, bundle router, benchmark on Dell Latitude 7400). Phase 2B is blocked on a working
+Longer-term map (background): the full model-integration ladder runs all five rungs plus the
+stretch tier, followed by Phase 2B (GGUF export, bundle router, benchmark on Dell Latitude 7400). Phase 2B is blocked on a working
 fine-tuned model artifact; for the paper it is optional/future per §16.2.

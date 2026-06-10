@@ -57,12 +57,12 @@ include = ["akan_bpe*"]
 [tool.black]
 line-length = 100
 target-version = ["py310", "py311", "py312"]
-extend-exclude = "notebooks/(train_eval|2a1_qwen3-0\\.6b_tts)\\.ipynb"
+extend-exclude = "notebooks/"
 
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-extend-exclude = ["notebooks/train_eval.ipynb", "notebooks/2a1_qwen3-0.6b_tts.ipynb"]
+extend-exclude = ["notebooks"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]

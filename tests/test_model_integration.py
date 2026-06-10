@@ -385,7 +385,7 @@ def test_run_model_integration_colab_qlora_uses_training_branch(monkeypatch) -> 
             return [[1, 2, 3]]
 
     class FakeTorch:
-        class cuda:
+        class cuda:  # noqa: N801 - mirrors the torch.cuda namespace
             @staticmethod
             def is_available() -> bool:
                 return False
@@ -478,61 +478,89 @@ def test_run_model_integration_colab_qlora_uses_training_branch(monkeypatch) -> 
     assert payload["embedding_init"] == {"mode": "random", "rows_initialized": 0}
 
 
-def test_compute_model_bpb_sums_nll_over_unmasked_tokens() -> None:
+class _FakeTokenizer:
+    """Returns fixed input_ids regardless of text, for deterministic BPB tests."""
+
+    def __init__(self, ids, eos_token_id=None):
+        self._ids = list(ids)
+        self.eos_token_id = eos_token_id
+
+    def __call__(self, text, add_special_tokens=False):
+        return {"input_ids": list(self._ids)}
+
+
+class _FakeOutputs:
+    def __init__(self, logits):
+        self.logits = logits
+
+
+class _FakeBpbModel:
+    device = "cpu"
+
+    def __init__(self, logits):
+        self._logits = logits
+
+    def eval(self):
+        return self
+
+    def __call__(self, input_ids=None, attention_mask=None):
+        return _FakeOutputs(self._logits)
+
+
+def test_compute_model_bpb_full_sums_nll_over_all_targets() -> None:
     import torch
 
-    from akan_bpe.model_integration import compute_model_bpb
+    from akan_bpe.model_integration import compute_model_bpb_full
 
-    class FakeOutputs:
-        def __init__(self, logits):
-            self.logits = logits
-
-    class FakeBpbModel:
-        device = "cpu"
-
-        def __init__(self, logits):
-            self._logits = logits
-
-        def eval(self):
-            return self
-
-        def __call__(self, input_ids=None, attention_mask=None):
-            return FakeOutputs(self._logits)
-
-    # Two positions, vocab size 2, uniform logits -> each predicted token costs
-    # -log(0.5) = ln(2) nats == 1 bit. One unmasked target (label at position 1).
-    logits = torch.zeros(1, 2, 2)
-    model = FakeBpbModel(logits)
-    eval_dataset = [{"input_ids": [0, 1], "attention_mask": [1, 1], "labels": [0, 1]}]
-
-    result = compute_model_bpb(model, eval_dataset, total_bytes=10, torch=torch)
+    # One chunk of 2 tokens, vocab size 2, uniform logits -> the single target costs
+    # -log(0.5) = ln(2) nats == 1 bit. The 10-byte text gives 1 bit / 10 bytes = 0.1 BPB.
+    model = _FakeBpbModel(torch.zeros(1, 2, 2))
+    tokenizer = _FakeTokenizer([0, 1])
+    result = compute_model_bpb_full(model, ["x" * 10], tokenizer, torch, chunk_size=256)
 
     assert result.num_target_tokens == 1
+    assert result.total_bytes == 10
     assert result.total_nll_bits == pytest.approx(1.0)
     assert result.bits_per_byte == pytest.approx(0.1)
 
 
-def test_compute_model_bpb_ignores_masked_labels() -> None:
+def test_compute_model_bpb_full_covers_every_byte_no_truncation() -> None:
+    """Regression for the truncation bug: the denominator is the FULL byte count,
+    and every token of a long text is scored across multiple chunks."""
     import torch
 
-    from akan_bpe.model_integration import compute_model_bpb
+    from akan_bpe.metrics import count_utf8_bytes
+    from akan_bpe.model_integration import compute_model_bpb_full
 
-    class FakeOutputs:
-        def __init__(self, logits):
-            self.logits = logits
+    # 600 tokens > chunk_size 256 -> 3 chunks (256 + 256 + 88); targets = 255 + 255 + 87 = 597.
+    ids = list(range(600))
 
-    class FakeBpbModel:
+    class _ChunkModel:
         device = "cpu"
 
         def eval(self):
             return self
 
         def __call__(self, input_ids=None, attention_mask=None):
-            return FakeOutputs(torch.zeros(1, 2, 2))
+            return _FakeOutputs(torch.zeros(1, input_ids.shape[1], 600))
 
-    # The only shifted target label is -100 -> no contributing tokens, zero NLL.
-    eval_dataset = [{"input_ids": [0, 1], "attention_mask": [1, 0], "labels": [0, -100]}]
-    result = compute_model_bpb(FakeBpbModel(), eval_dataset, total_bytes=10, torch=torch)
+    text = "y" * 1000
+    result = compute_model_bpb_full(
+        _ChunkModel(), [text], _FakeTokenizer(ids), torch, chunk_size=256
+    )
+
+    assert result.num_target_tokens == 597  # every token scored, none dropped
+    assert result.total_bytes == count_utf8_bytes([text]) == 1000  # full coverage, not a prefix
+
+
+def test_compute_model_bpb_full_skips_single_token_chunks() -> None:
+    import torch
+
+    from akan_bpe.model_integration import compute_model_bpb_full
+
+    # A lone token has no target -> skipped, zero NLL.
+    model = _FakeBpbModel(torch.zeros(1, 1, 2))
+    result = compute_model_bpb_full(model, ["x" * 10], _FakeTokenizer([0]), torch, chunk_size=256)
 
     assert result.num_target_tokens == 0
     assert result.total_nll_bits == pytest.approx(0.0)
@@ -721,3 +749,43 @@ def test_cli_parses_embedding_init_and_skip_base_bpb(monkeypatch) -> None:
 
     assert captured["config"].embedding_init_mode == "mean_subword"
     assert captured["config"].compute_base_bpb is False
+
+
+def test_derive_experiment_id_uses_model_slug() -> None:
+    from akan_bpe.model_integration import derive_experiment_id, model_slug
+
+    assert model_slug("Qwen/Qwen3-0.6B-Base") == "qwen-0.6b"
+    assert derive_experiment_id("Qwen/Qwen3-0.6B-Base", "random") == "run-qwen-0.6b"
+    assert derive_experiment_id("meta-llama/Llama-3.2-1B", "mean_subword") == "run-llama-1b-meansub"
+
+
+def test_cli_derives_defaults_from_model_id(monkeypatch) -> None:
+    from scripts import model_integration as cli
+
+    captured = {}
+
+    monkeypatch.setattr(
+        cli, "run_model_integration", lambda config: captured.update(config=config) or {}
+    )
+    monkeypatch.setattr(cli, "write_json", lambda path, payload: None)
+    monkeypatch.setattr(
+        sys, "argv", ["scripts/model_integration.py", "--model-id", "Qwen/Qwen3-0.6B-Base"]
+    )
+
+    cli.main()
+
+    config = captured["config"]
+    assert config.device_mode == "colab-qlora"  # real run is the default
+    assert config.experiment_id == "run-qwen-0.6b"
+    assert config.output_dir == str(Path("models") / "run-qwen-0.6b")
+    assert config.results_output == str(Path("results") / "run-qwen-0.6b.json")
+    assert config.tokenizer_path == "models/tts_tokenizer.json"
+
+
+def test_cli_requires_model_id_for_colab_qlora(monkeypatch) -> None:
+    from scripts import model_integration as cli
+
+    monkeypatch.setattr(sys, "argv", ["scripts/model_integration.py"])
+
+    with pytest.raises(SystemExit):
+        cli.main()

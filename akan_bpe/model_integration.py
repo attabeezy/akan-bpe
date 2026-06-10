@@ -5,10 +5,11 @@ from __future__ import annotations
 import math
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from datasets import Dataset
-from transformers import AutoTokenizer, PreTrainedTokenizerFast
+from tqdm.auto import tqdm
+from transformers import AutoTokenizer, PreTrainedTokenizerBase, PreTrainedTokenizerFast
 
 from akan_bpe.datasets import load_jsonl_samples, samples_to_texts
 from akan_bpe.io import ensure_parent_dir
@@ -120,7 +121,7 @@ class ModelIntegrationConfig:
     compute_base_bpb: bool = True
 
 
-def _set_model_token_config(model: Any, tokenizer: PreTrainedTokenizerFast) -> None:
+def _set_model_token_config(model: Any, tokenizer: PreTrainedTokenizerBase) -> None:
     """Align model/generation token IDs with the experiment tokenizer."""
     if tokenizer.pad_token_id is not None:
         model.config.pad_token_id = tokenizer.pad_token_id
@@ -221,16 +222,25 @@ def build_text_dataset(
     texts: list[str],
     tokenizer: PreTrainedTokenizerFast,
     max_length: int,
+    desc: str = "Tokenizing texts",
 ) -> Dataset:
     """Tokenize texts into fixed-width causal LM training examples."""
-    return Dataset.from_list([_build_causal_example(text, tokenizer, max_length) for text in texts])
+    rows = [
+        _build_causal_example(text, tokenizer, max_length)
+        for text in tqdm(texts, desc=desc, unit="text")
+    ]
+    return Dataset.from_list(rows)
 
 
-def compute_token_count_stats(tokenizer: Any, texts: list[str]) -> dict[str, float | int]:
+def compute_token_count_stats(
+    tokenizer: Any,
+    texts: list[str],
+    desc: str = "Counting tokens",
+) -> dict[str, float | int]:
     """Measure total tokens and fertility-style token/word counts for a text list."""
     total_tokens = 0
     total_words = 0
-    for text in texts:
+    for text in tqdm(texts, desc=desc, unit="text"):
         encoded = tokenizer(text, add_special_tokens=False)
         input_ids = encoded["input_ids"] if isinstance(encoded, dict) else encoded.input_ids
         total_tokens += len(input_ids)
@@ -256,8 +266,10 @@ def compute_token_count_comparison(
         base_tokenizer.pad_token = (
             base_tokenizer.eos_token or base_tokenizer.unk_token or base_tokenizer.pad_token
         )
-    base_stats = compute_token_count_stats(base_tokenizer, texts)
-    experiment_stats = compute_token_count_stats(experiment_tokenizer, texts)
+    base_stats = compute_token_count_stats(base_tokenizer, texts, desc="Counting base tokens")
+    experiment_stats = compute_token_count_stats(
+        experiment_tokenizer, texts, desc="Counting Akan tokens"
+    )
     total_base_tokens = int(base_stats["total_tokens"])
     total_experiment_tokens = int(experiment_stats["total_tokens"])
     reduction_ratio = 0.0
@@ -276,6 +288,7 @@ def compute_model_bpb_full(
     tokenizer: Any,
     torch: Any,
     chunk_size: int = 256,
+    desc: str = "Scoring BPB",
 ) -> BpbResult:
     """Compute bits-per-byte with full byte coverage (no truncation).
 
@@ -297,7 +310,7 @@ def compute_model_bpb_full(
     eos_id = tokenizer.eos_token_id
     model.eval()
     with torch.no_grad():
-        for text in texts:
+        for text in tqdm(texts, desc=desc, unit="text"):
             ids = tokenizer(text, add_special_tokens=False)["input_ids"]
             if eos_id is not None:
                 ids = ids + [eos_id]
@@ -333,6 +346,7 @@ def compute_model_bpb_sliding(
     torch: Any,
     window: int = 512,
     stride: int = 256,
+    desc: str = "Scoring sliding BPB",
 ) -> BpbResult:
     """Full-coverage BPB via a strided sliding window; each target scored once.
 
@@ -348,7 +362,7 @@ def compute_model_bpb_sliding(
     eos_id = tokenizer.eos_token_id
     model.eval()
     with torch.no_grad():
-        for text in texts:
+        for text in tqdm(texts, desc=desc, unit="text"):
             ids = tokenizer(text, add_special_tokens=False)["input_ids"]
             if eos_id is not None:
                 ids = ids + [eos_id]
@@ -437,7 +451,12 @@ def compute_bpb_metrics(
     """
     total_bytes = count_utf8_bytes(eval_texts)
     experiment = compute_model_bpb_full(
-        experiment_model, eval_texts, experiment_tokenizer, torch, config.max_length
+        experiment_model,
+        eval_texts,
+        experiment_tokenizer,
+        torch,
+        config.max_length,
+        desc="Scoring fine-tuned BPB",
     )
 
     base_result: BpbResult | None = None
@@ -451,7 +470,12 @@ def compute_bpb_metrics(
         _set_model_token_config(base_model, base_tokenizer)
         try:
             base_result = compute_model_bpb_full(
-                base_model, eval_texts, base_tokenizer, torch, config.max_length
+                base_model,
+                eval_texts,
+                base_tokenizer,
+                torch,
+                config.max_length,
+                desc="Scoring base BPB",
             )
         finally:
             del base_model
@@ -494,7 +518,11 @@ def _init_embeddings_mean_of_subword(
 
     rows_initialized = 0
     with torch.no_grad():
-        for token_id in range(len(experiment_tokenizer)):
+        for token_id in tqdm(
+            range(len(experiment_tokenizer)),
+            desc="Initializing mean-subword embeddings",
+            unit="token",
+        ):
             token: Any = experiment_tokenizer.convert_ids_to_tokens(token_id)
             surface = experiment_tokenizer.convert_tokens_to_string([token]) if token else ""
             base_ids = (
@@ -782,14 +810,14 @@ def _build_model_and_training_args(
 
 def _generate_samples(
     model: Any,
-    tokenizer: PreTrainedTokenizerFast,
+    tokenizer: PreTrainedTokenizerBase,
     prompts: list[str],
     max_length: int,
     max_new_tokens: int,
 ) -> list[dict[str, str]]:
     """Generate deterministic qualitative samples for a prompt list."""
-    generation_samples = []
-    for prompt in prompts:
+    generation_samples: list[dict[str, str]] = []
+    for prompt in tqdm(prompts, desc="Generating samples", unit="prompt"):
         encoded = tokenizer(
             prompt,
             return_tensors="pt",
@@ -806,7 +834,7 @@ def _generate_samples(
             do_sample=False,
             pad_token_id=tokenizer.pad_token_id,
         )
-        completion = tokenizer.decode(generated[0], skip_special_tokens=True)
+        completion = cast(str, tokenizer.decode(generated[0], skip_special_tokens=True))
         generation_samples.append({"prompt": prompt, "completion": completion})
     return generation_samples
 
@@ -856,7 +884,7 @@ def _run_smoke_validation(
             max_new_tokens=config.generation_max_new_tokens,
         )
 
-    smoke = {
+    smoke: dict[str, object] = {
         "enabled": True,
         "validated_pipeline_only": True,
         "forward_pass_succeeded": True,
@@ -954,8 +982,12 @@ def run_model_integration(config: ModelIntegrationConfig) -> dict[str, object]:
 
     runtime_model_id = resolve_runtime_model_id(config)
     tokenizer = load_experiment_tokenizer(Path(config.tokenizer_path))
-    train_dataset = build_text_dataset(train_texts, tokenizer, config.max_length)
-    eval_dataset = build_text_dataset(eval_texts, tokenizer, config.max_length)
+    train_dataset = build_text_dataset(
+        train_texts, tokenizer, config.max_length, desc="Building train dataset"
+    )
+    eval_dataset = build_text_dataset(
+        eval_texts, tokenizer, config.max_length, desc="Building eval dataset"
+    )
     token_count_comparison = compute_token_count_comparison(runtime_model_id, tokenizer, eval_texts)
 
     if config.device_mode == "smoke":
@@ -992,7 +1024,7 @@ def run_model_integration(config: ModelIntegrationConfig) -> dict[str, object]:
         config, tokenizer, runtime_model_id
     )
 
-    trainer = trainer_cls(
+    trainer = cast(Any, trainer_cls)(
         model=model,
         args=training_args,
         train_dataset=train_dataset,

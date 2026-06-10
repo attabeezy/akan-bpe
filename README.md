@@ -82,4 +82,4 @@ Datasets, model artifacts, and results are generated locally and gitignored.
 
 ## License
 
-MIT.
+[MIT](LICENSE).

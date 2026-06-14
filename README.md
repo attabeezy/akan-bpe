@@ -57,6 +57,26 @@ The five ladder runs each have a ready-to-run notebook: `notebooks/run-<model>.i
   the eval text. Scoring uses **full byte coverage** (every byte of every text), so high-fertility
   base tokenizers are compared honestly against the Akan tokenizer.
 
+## Model Ladder Results
+
+The 5-model QLoRA ladder has been re-scored with the corrected full-coverage BPB metric. Full
+run payloads and a combined machine-readable artifact are tracked in
+`results/model-ladder-results.json`; the source notebooks preserve the original printed JSON
+blocks used for recovery.
+
+| Model | Arm | Base fert. | Akan fert. | Token reduction | Base BPB | Akan BPB | BPB improvement | Perplexity |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `qwen-0.6b` | `random` | 2.530 | 1.259 | 50.3% | 2.9523 | 1.4805 | +1.4718 | 82.68 |
+| `qwen-0.6b` | `mean_subword` | 2.530 | 1.259 | 50.3% | 2.9523 | 1.2832 | +1.6691 | 45.28 |
+| `qwen-1.7b` | `random` | 2.530 | 1.259 | 50.3% | 2.7556 | 1.4741 | +1.2815 | 82.36 |
+| `qwen-1.7b` | `mean_subword` | 2.530 | 1.259 | 50.3% | 2.7556 | 1.2478 | +1.5078 | 40.93 |
+| `gemma-1b` | `random` | 2.284 | 1.259 | 44.9% | 3.3907 | 1.4841 | +1.9067 | 87.14 |
+| `gemma-1b` | `mean_subword` | 2.284 | 1.259 | 44.9% | 3.3907 | 1.2355 | +2.1553 | 39.27 |
+| `llama-1b` | `random` | 3.073 | 1.259 | 59.0% | 2.4480 | 1.4150 | +1.0330 | 69.09 |
+| `llama-1b` | `mean_subword` | 3.073 | 1.259 | 59.0% | 2.4480 | 1.2337 | +1.2143 | 39.24 |
+| `aya-base` | `random` | 2.975 | 1.259 | 57.7% | 2.7129 | 1.4755 | +1.2374 | 82.49 |
+| `aya-base` | `mean_subword` | 2.975 | 1.259 | 57.7% | 2.7129 | 1.2323 | +1.4806 | 38.84 |
+
 ## Project Structure
 
 ```text
@@ -64,11 +84,12 @@ akan-bpe/
 ├── akan_bpe/        # core library (tokenizers, metrics, router, model integration)
 ├── scripts/         # download, train_bpe, benchmark_fertility, router, model_integration
 ├── notebooks/       # run-<model>.ipynb ladder runs + train_eval walkthrough
+├── results/         # tracked JSON experiment outputs and combined ladder artifact
 ├── tests/
 └── pyproject.toml
 ```
 
-Datasets, model artifacts, and results are generated locally and gitignored.
+Datasets and large model artifacts are generated locally and gitignored.
 
 ## Roadmap
 
@@ -76,7 +97,7 @@ Datasets, model artifacts, and results are generated locally and gitignored.
 - [x] Heuristic + ML-classifier domain router (held-out eval)
 - [x] Model-integration ladder — 5 QLoRA runs across 4 families on Kaggle/T4
 - [x] Bits-per-byte metric with full byte coverage + mean-of-subword embedding-init ablation
-- [ ] Re-score the ladder under the corrected BPB metric
+- [x] Re-score the ladder under the corrected BPB metric
 - [ ] Generation quality (chrF on held-out Twi)
 - [ ] Workshop write-up (AfricaNLP / WiNLP)
 

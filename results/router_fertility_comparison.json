@@ -1,0 +1,15 @@
+{
+  "config": "config/router_config.json",
+  "test_file": "data/pristine_twi_test.jsonl",
+  "total_samples": 2500,
+  "routing_decisions": {
+    "asr": 2,
+    "tts": 2498,
+    "mixed": 0
+  },
+  "percentages": {
+    "asr": 0.08,
+    "tts": 99.92,
+    "mixed": 0.0
+  }
+}

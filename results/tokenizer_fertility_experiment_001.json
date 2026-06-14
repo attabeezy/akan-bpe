@@ -1,0 +1,180 @@
+{
+  "experiment_id": "tokenizer_fertility_experiment_001",
+  "language": "akan",
+  "metric": "fertility",
+  "formula": "total_tokens / total_words",
+  "test_sets": {
+    "asr_test": "data/aka_asr_test.jsonl",
+    "tts_test": "data/pristine_twi_test.jsonl"
+  },
+  "tokenizers": {
+    "xlm_roberta_base": {
+      "reference": "xlm-roberta-base"
+    },
+    "bert_base_multilingual_cased": {
+      "reference": "bert-base-multilingual-cased"
+    },
+    "mt5_base": {
+      "reference": "google/mt5-base"
+    },
+    "asr": {
+      "reference": "models/asr_tokenizer.json"
+    },
+    "tts": {
+      "reference": "models/tts_tokenizer.json"
+    },
+    "mixed": {
+      "reference": "models/mixed_tokenizer.json"
+    }
+  },
+  "results": {
+    "xlm_roberta_base": {
+      "asr_test": {
+        "tokenizer_name": "xlm_roberta_base",
+        "tokenizer_ref": "xlm-roberta-base",
+        "test_set_name": "asr_test",
+        "source_file": "data/aka_asr_test.jsonl",
+        "fertility": 2.4053328716128473,
+        "total_tokens": 83352,
+        "total_words": 34653,
+        "num_samples": 1011,
+        "fertility_std": 0.2787260153672792
+      },
+      "tts_test": {
+        "tokenizer_name": "xlm_roberta_base",
+        "tokenizer_ref": "xlm-roberta-base",
+        "test_set_name": "tts_test",
+        "source_file": "data/pristine_twi_test.jsonl",
+        "fertility": 2.4952271410460134,
+        "total_tokens": 1739862,
+        "total_words": 697276,
+        "num_samples": 2500,
+        "fertility_std": 0.11957832315104959
+      }
+    },
+    "bert_base_multilingual_cased": {
+      "asr_test": {
+        "tokenizer_name": "bert_base_multilingual_cased",
+        "tokenizer_ref": "bert-base-multilingual-cased",
+        "test_set_name": "asr_test",
+        "source_file": "data/aka_asr_test.jsonl",
+        "fertility": 2.3348627824430785,
+        "total_tokens": 80910,
+        "total_words": 34653,
+        "num_samples": 1011,
+        "fertility_std": 0.2546528847047916
+      },
+      "tts_test": {
+        "tokenizer_name": "bert_base_multilingual_cased",
+        "tokenizer_ref": "bert-base-multilingual-cased",
+        "test_set_name": "tts_test",
+        "source_file": "data/pristine_twi_test.jsonl",
+        "fertility": 2.35550054784619,
+        "total_tokens": 1642434,
+        "total_words": 697276,
+        "num_samples": 2500,
+        "fertility_std": 0.10693789712338661
+      }
+    },
+    "mt5_base": {
+      "asr_test": {
+        "tokenizer_name": "mt5_base",
+        "tokenizer_ref": "google/mt5-base",
+        "test_set_name": "asr_test",
+        "source_file": "data/aka_asr_test.jsonl",
+        "fertility": 2.3222520416702737,
+        "total_tokens": 80473,
+        "total_words": 34653,
+        "num_samples": 1011,
+        "fertility_std": 0.2603228565409557
+      },
+      "tts_test": {
+        "tokenizer_name": "mt5_base",
+        "tokenizer_ref": "google/mt5-base",
+        "test_set_name": "tts_test",
+        "source_file": "data/pristine_twi_test.jsonl",
+        "fertility": 2.5108622697468435,
+        "total_tokens": 1750764,
+        "total_words": 697276,
+        "num_samples": 2500,
+        "fertility_std": 0.11541993442315687
+      }
+    },
+    "asr": {
+      "asr_test": {
+        "tokenizer_name": "asr",
+        "tokenizer_ref": "models/asr_tokenizer.json",
+        "test_set_name": "asr_test",
+        "source_file": "data/aka_asr_test.jsonl",
+        "fertility": 1.2247713040717976,
+        "total_tokens": 42442,
+        "total_words": 34653,
+        "num_samples": 1011,
+        "fertility_std": 0.10051536863932718
+      },
+      "tts_test": {
+        "tokenizer_name": "asr",
+        "tokenizer_ref": "models/asr_tokenizer.json",
+        "test_set_name": "tts_test",
+        "source_file": "data/pristine_twi_test.jsonl",
+        "fertility": 1.537904646079888,
+        "total_tokens": 1072344,
+        "total_words": 697276,
+        "num_samples": 2500,
+        "fertility_std": 0.11623019096360693
+      }
+    },
+    "tts": {
+      "asr_test": {
+        "tokenizer_name": "tts",
+        "tokenizer_ref": "models/tts_tokenizer.json",
+        "test_set_name": "asr_test",
+        "source_file": "data/aka_asr_test.jsonl",
+        "fertility": 1.4875479756442445,
+        "total_tokens": 51548,
+        "total_words": 34653,
+        "num_samples": 1011,
+        "fertility_std": 0.17495379884607387
+      },
+      "tts_test": {
+        "tokenizer_name": "tts",
+        "tokenizer_ref": "models/tts_tokenizer.json",
+        "test_set_name": "tts_test",
+        "source_file": "data/pristine_twi_test.jsonl",
+        "fertility": 1.2634179291987677,
+        "total_tokens": 880951,
+        "total_words": 697276,
+        "num_samples": 2500,
+        "fertility_std": 0.0752700820547782
+      }
+    },
+    "mixed": {
+      "asr_test": {
+        "tokenizer_name": "mixed",
+        "tokenizer_ref": "models/mixed_tokenizer.json",
+        "test_set_name": "asr_test",
+        "source_file": "data/aka_asr_test.jsonl",
+        "fertility": 1.297001702594292,
+        "total_tokens": 44945,
+        "total_words": 34653,
+        "num_samples": 1011,
+        "fertility_std": 0.13189366535914934
+      },
+      "tts_test": {
+        "tokenizer_name": "mixed",
+        "tokenizer_ref": "models/mixed_tokenizer.json",
+        "test_set_name": "tts_test",
+        "source_file": "data/pristine_twi_test.jsonl",
+        "fertility": 1.268424554982532,
+        "total_tokens": 884442,
+        "total_words": 697276,
+        "num_samples": 2500,
+        "fertility_std": 0.07679899174619619
+      }
+    }
+  },
+  "summary": {
+    "best_on_asr_test": "asr",
+    "best_on_tts_test": "tts"
+  }
+}

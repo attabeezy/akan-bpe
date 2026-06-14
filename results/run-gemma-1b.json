@@ -1,0 +1,102 @@
+{
+  "experiment_id": "run-gemma-1b",
+  "model_id": "google/gemma-3-1b-pt",
+  "runtime_model_id": "google/gemma-3-1b-pt",
+  "tokenizer_path": "models/tts_tokenizer.json",
+  "train_file": "data/pristine_twi_train.jsonl",
+  "eval_file": "data/pristine_twi_test.jsonl",
+  "train_samples": 4096,
+  "eval_samples": 512,
+  "max_length": 256,
+  "batch_size": 1,
+  "grad_accum": 16,
+  "epochs": 1.0,
+  "learning_rate": 0.0002,
+  "peft": {
+    "rank": 16,
+    "alpha": 32,
+    "dropout": 0.05,
+    "target_modules": [
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "o_proj",
+      "gate_proj",
+      "up_proj",
+      "down_proj"
+    ]
+  },
+  "device_mode": "colab-qlora",
+  "embedding_init_mode": "random",
+  "embedding_init": {
+    "mode": "random",
+    "rows_initialized": 0
+  },
+  "device": {
+    "cuda_available": true,
+    "device_count": 1,
+    "device_name": "Tesla T4"
+  },
+  "token_count_comparison": {
+    "base_model_tokenizer": {
+      "num_texts": 512,
+      "total_tokens": 323024,
+      "total_words": 141420,
+      "fertility": 2.2841465139301373
+    },
+    "experiment_tokenizer": {
+      "num_texts": 512,
+      "total_tokens": 177986,
+      "total_words": 141420,
+      "fertility": 1.2585631452411257
+    },
+    "token_reduction_ratio": 0.44900069344692656
+  },
+  "eval": {
+    "eval_loss": 4.467477798461914,
+    "perplexity": 87.13667297363281,
+    "bpb": {
+      "experiment": {
+        "bits_per_byte": 1.484059573957268,
+        "total_nll_bits": 1142004.618994153,
+        "total_bytes": 769514,
+        "num_target_tokens": 177496
+      },
+      "base": {
+        "bits_per_byte": 3.3907498103997025,
+        "total_nll_bits": 2609229.4495999166,
+        "total_bytes": 769514,
+        "num_target_tokens": 322012
+      },
+      "total_bytes": 769514,
+      "improvement": 1.9066902364424345
+    }
+  },
+  "generation_samples": [
+    {
+      "prompt": "Ananse nyaa adwene sɛ ɔbɛkɔ akɔkyerɛ agyapadie a ɛwɔ abɔdeɛ mu. Ɔkɔɔ",
+      "completion": "Ananse nyaa adwene sɛ ɔbɛkɔ akɔkyerɛ agyapadie a ɛwɔ abɔdeɛ mu . Ɔkɔɔ nso , ɛyɛ me nwanwa sɛ ɔbɛkɔ akɔkyerɛ agyapadie a , ɛsɛ sɛ yɛn nyinaa yɛ den . Sɛ yɛhwɛ yɛn nyinaa wɔ yɛn man mu . Sɛ yɛhwɛ yɛn nyinaa wɔ"
+    },
+    {
+      "prompt": "Ɛnnɛ me tirim yɛ me duru pa ara bere a mifi akwantu",
+      "completion": "Ɛnnɛ me tirim yɛ me duru pa ara bere a mi fi akwantu no , na me tirim yɛ me basaa . Sɛ me dwene me ho sɛ , me tirim yɛ me basaa . Sɛ me dwene me ho sɛ , me dwene me"
+    },
+    {
+      "prompt": "Sɛ yɛbɛka abakɔsɛm a, nnansa yi, anigyeɛ kɛse bi a ɛbaa Prisons",
+      "completion": "Sɛ yɛbɛka abakɔsɛm a , nnansa yi , anigyeɛ kɛse bi a ɛbaa Prisons no , na ɛyɛ asɛm a ɛfa yɛn man no mu no , na ɛyɛ asɛm a ɛfa yɛn man no mu no , na ɛyɛ asɛm a ɛfa yɛn man no"
+    }
+  ],
+  "output_model_dir": "models/run-gemma-1b",
+  "smoke": null,
+  "reload_verification": {
+    "success": true,
+    "output_dir": "models/run-gemma-1b",
+    "runtime_model_id": "google/gemma-3-1b-pt",
+    "prompt": "Ananse nyaa adwene sɛ ɔbɛkɔ akɔkyerɛ agyapadie a ɛwɔ abɔdeɛ mu. Ɔkɔɔ",
+    "completion": "Ananse nyaa adwene sɛ ɔbɛkɔ akɔkyerɛ agyapadie a ɛwɔ abɔdeɛ mu . Ɔkɔɔ nso , ɛyɛ me nwanwa sɛ ɔbɛkɔ akɔkyerɛ agyapadie a , ɛsɛ sɛ yɛn nyinaa yɛ den . Sɛ yɛhwɛ yɛn nyinaa wɔ yɛn man mu . Sɛ yɛhwɛ yɛn nyinaa wɔ"
+  },
+  "training": {
+    "completed": true,
+    "device_mode": "colab-qlora"
+  }
+}

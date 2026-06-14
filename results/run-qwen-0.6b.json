@@ -1,0 +1,102 @@
+{
+  "experiment_id": "run-qwen-0.6b",
+  "model_id": "Qwen/Qwen3-0.6B-Base",
+  "runtime_model_id": "Qwen/Qwen3-0.6B-Base",
+  "tokenizer_path": "models/tts_tokenizer.json",
+  "train_file": "data/pristine_twi_train.jsonl",
+  "eval_file": "data/pristine_twi_test.jsonl",
+  "train_samples": 4096,
+  "eval_samples": 512,
+  "max_length": 256,
+  "batch_size": 1,
+  "grad_accum": 16,
+  "epochs": 1.0,
+  "learning_rate": 0.0002,
+  "peft": {
+    "rank": 16,
+    "alpha": 32,
+    "dropout": 0.05,
+    "target_modules": [
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "o_proj",
+      "gate_proj",
+      "up_proj",
+      "down_proj"
+    ]
+  },
+  "device_mode": "colab-qlora",
+  "embedding_init_mode": "random",
+  "embedding_init": {
+    "mode": "random",
+    "rows_initialized": 0
+  },
+  "device": {
+    "cuda_available": true,
+    "device_count": 1,
+    "device_name": "Tesla T4"
+  },
+  "token_count_comparison": {
+    "base_model_tokenizer": {
+      "num_texts": 512,
+      "total_tokens": 357830,
+      "total_words": 141420,
+      "fertility": 2.5302644604723517
+    },
+    "experiment_tokenizer": {
+      "num_texts": 512,
+      "total_tokens": 177986,
+      "total_words": 141420,
+      "fertility": 1.2585631452411257
+    },
+    "token_reduction_ratio": 0.502596204901769
+  },
+  "eval": {
+    "eval_loss": 4.414968490600586,
+    "perplexity": 82.67923736572266,
+    "bpb": {
+      "experiment": {
+        "bits_per_byte": 1.480501242915319,
+        "total_nll_bits": 1139266.4334407388,
+        "total_bytes": 769514,
+        "num_target_tokens": 177496
+      },
+      "base": {
+        "bits_per_byte": 2.9523074296961203,
+        "total_nll_bits": 2271841.8994551804,
+        "total_bytes": 769514,
+        "num_target_tokens": 356674
+      },
+      "total_bytes": 769514,
+      "improvement": 1.4718061867808012
+    }
+  },
+  "generation_samples": [
+    {
+      "prompt": "Ananse nyaa adwene sɛ ɔbɛkɔ akɔkyerɛ agyapadie a ɛwɔ abɔdeɛ mu. Ɔkɔɔ",
+      "completion": "Ananse nyaa adwene sɛ ɔbɛkɔ akɔkyerɛ agyapadie a ɛwɔ abɔdeɛ mu . Ɔkɔɔ nea ɛrekɔ so wɔ yɛn man Ghana mu . Ananse kɔɔ kwaeɛ a , ɛyɛ me nwanwa sɛ me ne me ho . Ananse kɔɔ kwaeɛ a , me ne me ho"
+    },
+    {
+      "prompt": "Ɛnnɛ me tirim yɛ me duru pa ara bere a mifi akwantu",
+      "completion": "Ɛnnɛ me tirim yɛ me duru pa ara bere a mi fi akwantu a , me werɛ how paa . Sɛ mehwɛ sɛnea me dwene me sɛ me dwene me , me dwene me sɛ me dwene me . Sɛ mehwɛ sɛnea me dwene me"
+    },
+    {
+      "prompt": "Sɛ yɛbɛka abakɔsɛm a, nnansa yi, anigyeɛ kɛse bi a ɛbaa Prisons",
+      "completion": "Sɛ yɛbɛka abakɔsɛm a , nnansa yi , anigyeɛ kɛse bi a ɛbaa Prisons , na ɛyɛ me nwanwa . Sɛ wose \" Me \" a , ɛyɛ me nwanwa . Sɛ wose \" Me \" a , ɛyɛ me nwanwa . Sɛ wose \" Me"
+    }
+  ],
+  "output_model_dir": "models/run-qwen-0.6b",
+  "smoke": null,
+  "reload_verification": {
+    "success": true,
+    "output_dir": "models/run-qwen-0.6b",
+    "runtime_model_id": "Qwen/Qwen3-0.6B-Base",
+    "prompt": "Ananse nyaa adwene sɛ ɔbɛkɔ akɔkyerɛ agyapadie a ɛwɔ abɔdeɛ mu. Ɔkɔɔ",
+    "completion": "Ananse nyaa adwene sɛ ɔbɛkɔ akɔkyerɛ agyapadie a ɛwɔ abɔdeɛ mu . Ɔkɔɔ nea ɛrekɔ so wɔ yɛn man Ghana mu . Ananse kɔɔ kwaeɛ a , ɛyɛ me nwanwa sɛ yɛn nyinaa yɛ me nwanwa . Sɛ yɛhwɛ yɛn man Ghana a , ɛyɛ"
+  },
+  "training": {
+    "completed": true,
+    "device_mode": "colab-qlora"
+  }
+}

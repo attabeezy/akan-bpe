@@ -10,13 +10,16 @@ from akan_bpe.model_integration import (
     DEFAULT_SMOKE_MODEL_ID,
     ModelIntegrationConfig,
     PeftConfigSpec,
+    build_generation_eval_examples,
     build_result_payload,
     build_text_dataset,
+    compute_generation_quality_metrics,
     compute_token_count_comparison,
     load_experiment_tokenizer,
     run_model_integration,
     validate_colab_qlora_config,
 )
+from akan_bpe.datasets import TextSample
 from akan_bpe.tokenizers import train_bpe_tokenizer
 
 
@@ -113,6 +116,59 @@ def test_compute_token_count_comparison_uses_base_and_experiment_tokenizers(
     assert payload["base_model_tokenizer"]["total_tokens"] == 6
     assert payload["experiment_tokenizer"]["total_tokens"] > 0
     assert payload["token_reduction_ratio"] <= 1.0
+
+
+def test_build_generation_eval_examples_splits_prompt_and_reference() -> None:
+    samples = [
+        TextSample(id="too_short", text="one two three", source="test"),
+        TextSample(
+            id="ok",
+            text=" ".join(f"w{i}" for i in range(1, 11)),
+            source="test",
+        ),
+    ]
+
+    rows = build_generation_eval_examples(
+        samples=samples,
+        max_samples=1,
+        prompt_words=4,
+        reference_words=3,
+    )
+
+    assert rows == [
+        {
+            "id": "ok",
+            "prompt": "w1 w2 w3 w4",
+            "reference": "w5 w6 w7",
+        }
+    ]
+
+
+def test_compute_generation_quality_metrics_preserves_reconstructable_rows() -> None:
+    pytest.importorskip("sacrebleu")
+    rows = [
+        {
+            "id": "sample1",
+            "prompt": "me din",
+            "reference": "de kwame",
+            "hypothesis": "de kwame",
+            "full_generation": "me din de kwame",
+        }
+    ]
+
+    payload = compute_generation_quality_metrics(
+        rows=rows,
+        prompt_words=2,
+        reference_words=2,
+        max_new_tokens=4,
+        batch_size=1,
+    )
+
+    assert payload["metric"] == "sacrebleu.CHRF"
+    assert payload["num_examples"] == 1
+    assert payload["chrf"] > 99.0
+    assert payload["chrfpp"] > 99.0
+    assert payload["examples"] == rows
 
 
 def test_build_result_payload_contains_required_fields() -> None:
@@ -742,6 +798,16 @@ def test_cli_parses_embedding_init_and_skip_base_bpb(monkeypatch) -> None:
             "--embedding-init-mode",
             "mean_subword",
             "--skip-base-bpb",
+            "--generation-eval-samples",
+            "512",
+            "--generation-prompt-words",
+            "48",
+            "--generation-reference-words",
+            "64",
+            "--generation-eval-max-new-tokens",
+            "64",
+            "--generation-eval-batch-size",
+            "8",
         ],
     )
 
@@ -749,6 +815,50 @@ def test_cli_parses_embedding_init_and_skip_base_bpb(monkeypatch) -> None:
 
     assert captured["config"].embedding_init_mode == "mean_subword"
     assert captured["config"].compute_base_bpb is False
+    assert captured["config"].generation_eval_samples == 512
+    assert captured["config"].generation_prompt_words == 48
+    assert captured["config"].generation_reference_words == 64
+    assert captured["config"].generation_eval_max_new_tokens == 64
+    assert captured["config"].generation_eval_batch_size == 8
+
+
+def test_cli_skip_generation_quality_eval_overrides_sample_count(monkeypatch) -> None:
+    from scripts import model_integration as cli
+
+    captured = {}
+
+    def fake_run(config: ModelIntegrationConfig) -> dict[str, object]:
+        captured["config"] = config
+        return {"experiment_id": config.experiment_id, "output_model_dir": config.output_dir}
+
+    monkeypatch.setattr(cli, "run_model_integration", fake_run)
+    monkeypatch.setattr(cli, "write_json", lambda path, payload: None)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "scripts/model_integration.py",
+            "--experiment-id",
+            "exp",
+            "--model-id",
+            "fake/model",
+            "--tokenizer-path",
+            "t.json",
+            "--train-file",
+            "tr.jsonl",
+            "--eval-file",
+            "ev.jsonl",
+            "--output-dir",
+            "out",
+            "--generation-eval-samples",
+            "512",
+            "--skip-generation-quality-eval",
+        ],
+    )
+
+    cli.main()
+
+    assert captured["config"].generation_eval_samples == 0
 
 
 def test_derive_experiment_id_uses_model_slug() -> None:

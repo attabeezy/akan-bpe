@@ -11,7 +11,7 @@ from datasets import Dataset
 from tqdm.auto import tqdm
 from transformers import AutoTokenizer, PreTrainedTokenizerBase, PreTrainedTokenizerFast
 
-from akan_bpe.datasets import load_jsonl_samples, samples_to_texts
+from akan_bpe.datasets import TextSample, load_jsonl_samples, samples_to_texts
 from akan_bpe.io import ensure_parent_dir
 from akan_bpe.metrics import BpbResult, bits_per_byte, count_utf8_bytes
 
@@ -110,6 +110,11 @@ class ModelIntegrationConfig:
     seed: int = 42
     generation_samples: int = 3
     generation_max_new_tokens: int = 32
+    generation_eval_samples: int = 0
+    generation_prompt_words: int = 48
+    generation_reference_words: int = 64
+    generation_eval_max_new_tokens: int = 64
+    generation_eval_batch_size: int = 4
     # Embedding initialization for the swapped-in Akan vocabulary. "random" keeps
     # whatever resize_token_embeddings produces; "mean_subword" initializes each
     # Akan-vocab row from the mean of the base model's subword embeddings for that
@@ -600,6 +605,182 @@ def select_generation_prompts(texts: list[str], limit: int) -> list[str]:
     return prompts
 
 
+def build_generation_eval_examples(
+    samples: list[TextSample],
+    max_samples: int,
+    prompt_words: int,
+    reference_words: int,
+) -> list[dict[str, str]]:
+    """Build prompt/reference continuation rows from held-out samples."""
+    if max_samples <= 0:
+        return []
+    if prompt_words <= 0:
+        raise ValueError("generation_prompt_words must be positive.")
+    if reference_words <= 0:
+        raise ValueError("generation_reference_words must be positive.")
+
+    rows: list[dict[str, str]] = []
+    for sample in samples:
+        words = sample.text.split()
+        if len(words) <= prompt_words:
+            continue
+        reference = words[prompt_words : prompt_words + reference_words]
+        if not reference:
+            continue
+        rows.append(
+            {
+                "id": sample.id,
+                "prompt": " ".join(words[:prompt_words]),
+                "reference": " ".join(reference),
+            }
+        )
+        if len(rows) >= max_samples:
+            break
+    return rows
+
+
+def _sequence_width(input_ids: Any) -> int:
+    if hasattr(input_ids, "shape"):
+        return int(input_ids.shape[1])
+    first = input_ids[0]
+    return len(first)
+
+
+def _decode_generated_continuation(
+    tokenizer: PreTrainedTokenizerBase,
+    generated_ids: Any,
+    prompt_token_count: int,
+) -> tuple[str, str]:
+    ids = generated_ids.tolist() if hasattr(generated_ids, "tolist") else list(generated_ids)
+    continuation_ids = ids[prompt_token_count:]
+    hypothesis = cast(str, tokenizer.decode(continuation_ids, skip_special_tokens=True)).strip()
+    full_generation = cast(str, tokenizer.decode(ids, skip_special_tokens=True)).strip()
+    return hypothesis, full_generation
+
+
+def generate_continuation_rows(
+    model: Any,
+    tokenizer: PreTrainedTokenizerBase,
+    examples: list[dict[str, str]],
+    max_length: int,
+    max_new_tokens: int,
+    batch_size: int,
+) -> list[dict[str, str]]:
+    """Generate deterministic continuations for prompt/reference examples."""
+    if batch_size <= 0:
+        raise ValueError("generation_eval_batch_size must be positive.")
+    rows: list[dict[str, str]] = []
+    for start in tqdm(
+        range(0, len(examples), batch_size),
+        desc="Generating chrF continuations",
+        unit="batch",
+    ):
+        batch = examples[start : start + batch_size]
+        prompts = [example["prompt"] for example in batch]
+        encoded = tokenizer(
+            prompts,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            max_length=max_length,
+        )
+        encoded = {
+            key: value.to(model.device) if hasattr(value, "to") else value
+            for key, value in encoded.items()
+        }
+        generated = model.generate(
+            **encoded,
+            max_new_tokens=max_new_tokens,
+            do_sample=False,
+            num_beams=1,
+            pad_token_id=tokenizer.pad_token_id,
+        )
+        input_width = _sequence_width(encoded["input_ids"])
+        for index, example in enumerate(batch):
+            hypothesis, full_generation = _decode_generated_continuation(
+                tokenizer=tokenizer,
+                generated_ids=generated[index],
+                prompt_token_count=input_width,
+            )
+            rows.append(
+                {
+                    **example,
+                    "hypothesis": hypothesis,
+                    "full_generation": full_generation,
+                }
+            )
+    return rows
+
+
+def compute_generation_quality_metrics(
+    rows: list[dict[str, str]],
+    prompt_words: int,
+    reference_words: int,
+    max_new_tokens: int,
+    batch_size: int,
+) -> dict[str, object]:
+    """Compute chrF/chrF++ and preserve reconstructable generation rows."""
+    try:
+        from sacrebleu.metrics import CHRF
+    except ImportError as exc:
+        raise ImportError(
+            "Generation quality evaluation requires sacrebleu. "
+            'Install it with `uv pip install -e ".[train]"` or `uv pip install sacrebleu`.'
+        ) from exc
+
+    hypotheses = [row["hypothesis"] for row in rows]
+    references = [row["reference"] for row in rows]
+    chrf = CHRF(word_order=0).corpus_score(hypotheses, [references]).score if rows else 0.0
+    chrfpp = CHRF(word_order=2).corpus_score(hypotheses, [references]).score if rows else 0.0
+    return {
+        "metric": "sacrebleu.CHRF",
+        "num_examples": len(rows),
+        "prompt_words": prompt_words,
+        "reference_words": reference_words,
+        "max_new_tokens": max_new_tokens,
+        "batch_size": batch_size,
+        "decoding": {
+            "do_sample": False,
+            "num_beams": 1,
+        },
+        "chrf": chrf,
+        "chrfpp": chrfpp,
+        "examples": rows,
+    }
+
+
+def compute_generation_quality_eval(
+    config: ModelIntegrationConfig,
+    model: Any,
+    tokenizer: PreTrainedTokenizerBase,
+) -> dict[str, object] | None:
+    """Run held-out continuation generation and chrF scoring when configured."""
+    if config.generation_eval_samples <= 0:
+        return None
+    samples = load_jsonl_samples(Path(config.eval_file))
+    examples = build_generation_eval_examples(
+        samples=samples,
+        max_samples=config.generation_eval_samples,
+        prompt_words=config.generation_prompt_words,
+        reference_words=config.generation_reference_words,
+    )
+    rows = generate_continuation_rows(
+        model=model,
+        tokenizer=tokenizer,
+        examples=examples,
+        max_length=config.max_length,
+        max_new_tokens=config.generation_eval_max_new_tokens,
+        batch_size=config.generation_eval_batch_size,
+    )
+    return compute_generation_quality_metrics(
+        rows=rows,
+        prompt_words=config.generation_prompt_words,
+        reference_words=config.generation_reference_words,
+        max_new_tokens=config.generation_eval_max_new_tokens,
+        batch_size=config.generation_eval_batch_size,
+    )
+
+
 def build_result_payload(
     config: ModelIntegrationConfig,
     runtime_model_id: str,
@@ -883,6 +1064,11 @@ def _run_smoke_validation(
             max_length=config.max_length,
             max_new_tokens=config.generation_max_new_tokens,
         )
+        generation_quality = compute_generation_quality_eval(
+            config=config,
+            model=model,
+            tokenizer=tokenizer,
+        )
 
     smoke: dict[str, object] = {
         "enabled": True,
@@ -896,6 +1082,8 @@ def _run_smoke_validation(
         "perplexity": perplexity,
         "bpb": bpb,
     }
+    if generation_quality is not None:
+        eval_metrics["generation_quality"] = generation_quality
     return eval_metrics, generation_samples, smoke, embedding_init
 
 
@@ -1057,6 +1245,12 @@ def run_model_integration(config: ModelIntegrationConfig) -> dict[str, object]:
         max_length=config.max_length,
         max_new_tokens=config.generation_max_new_tokens,
     )
+    with torch.no_grad():
+        generation_quality = compute_generation_quality_eval(
+            config=config,
+            model=model,
+            tokenizer=tokenizer,
+        )
 
     output_dir = Path(config.output_dir)
     trainer.save_model(str(output_dir))
@@ -1078,6 +1272,7 @@ def run_model_integration(config: ModelIntegrationConfig) -> dict[str, object]:
             "eval_loss": eval_loss,
             "perplexity": perplexity,
             "bpb": bpb,
+            **({"generation_quality": generation_quality} if generation_quality else {}),
         },
         generation_samples=generation_samples,
         device=device,

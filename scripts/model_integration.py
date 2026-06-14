@@ -116,6 +116,42 @@ def parse_args() -> argparse.Namespace:
         default=32,
         help="Max new tokens per generation sample.",
     )
+    parser.add_argument(
+        "--generation-eval-samples",
+        type=int,
+        default=0,
+        help="Number of held-out prompt/reference continuations to score with chrF. "
+        "Defaults to 0 (disabled).",
+    )
+    parser.add_argument(
+        "--generation-prompt-words",
+        type=int,
+        default=48,
+        help="Number of initial words used as the generation-quality prompt.",
+    )
+    parser.add_argument(
+        "--generation-reference-words",
+        type=int,
+        default=64,
+        help="Number of held-out words used as the chrF reference continuation.",
+    )
+    parser.add_argument(
+        "--generation-eval-max-new-tokens",
+        type=int,
+        default=64,
+        help="Max new tokens per chrF generation-quality example.",
+    )
+    parser.add_argument(
+        "--generation-eval-batch-size",
+        type=int,
+        default=4,
+        help="Batch size for chrF generation-quality inference.",
+    )
+    parser.add_argument(
+        "--skip-generation-quality-eval",
+        action="store_true",
+        help="Disable chrF generation-quality evaluation even if a sample count is provided.",
+    )
     return parser.parse_args()
 
 
@@ -161,6 +197,13 @@ def main() -> None:
         seed=args.seed,
         generation_samples=args.generation_samples,
         generation_max_new_tokens=args.generation_max_new_tokens,
+        generation_eval_samples=0
+        if args.skip_generation_quality_eval
+        else args.generation_eval_samples,
+        generation_prompt_words=args.generation_prompt_words,
+        generation_reference_words=args.generation_reference_words,
+        generation_eval_max_new_tokens=args.generation_eval_max_new_tokens,
+        generation_eval_batch_size=args.generation_eval_batch_size,
         embedding_init_mode=args.embedding_init_mode,
         compute_base_bpb=args.compute_base_bpb,
     )

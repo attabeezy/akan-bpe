@@ -99,7 +99,7 @@ Datasets and large model artifacts are generated locally and gitignored.
 - [x] Bits-per-byte metric with full byte coverage + mean-of-subword embedding-init ablation
 - [x] Re-score the ladder under the corrected BPB metric
 - [ ] Generation quality (chrF on held-out Twi)
-- [ ] Workshop write-up (AfricaNLP / WiNLP)
+- [ ] IEEE Ghana ICAST 2026 write-up
 
 ## License
 

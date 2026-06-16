@@ -865,8 +865,11 @@ def test_derive_experiment_id_uses_model_slug() -> None:
     from akan_bpe.model_integration import derive_experiment_id, model_slug
 
     assert model_slug("Qwen/Qwen3-0.6B-Base") == "qwen-0.6b"
-    assert derive_experiment_id("Qwen/Qwen3-0.6B-Base", "random") == "run-qwen-0.6b"
-    assert derive_experiment_id("meta-llama/Llama-3.2-1B", "mean_subword") == "run-llama-1b-meansub"
+    assert derive_experiment_id("Qwen/Qwen3-0.6B-Base", "random") == "run-qwen-0.6b-mixed"
+    assert (
+        derive_experiment_id("meta-llama/Llama-3.2-1B", "mean_subword")
+        == "run-llama-1b-mixed-meansub"
+    )
 
 
 def test_cli_derives_defaults_from_model_id(monkeypatch) -> None:
@@ -886,10 +889,10 @@ def test_cli_derives_defaults_from_model_id(monkeypatch) -> None:
 
     config = captured["config"]
     assert config.device_mode == "colab-qlora"  # real run is the default
-    assert config.experiment_id == "run-qwen-0.6b"
-    assert config.output_dir == str(Path("models") / "run-qwen-0.6b")
-    assert config.results_output == str(Path("results") / "run-qwen-0.6b.json")
-    assert config.tokenizer_path == "models/tts_tokenizer.json"
+    assert config.experiment_id == "run-qwen-0.6b-mixed"
+    assert config.output_dir == str(Path("models") / "run-qwen-0.6b-mixed")
+    assert config.results_output == str(Path("results") / "run-qwen-0.6b-mixed.json")
+    assert config.tokenizer_path == "models/mixed_tokenizer.json"
 
 
 def test_cli_requires_model_id_for_colab_qlora(monkeypatch) -> None:

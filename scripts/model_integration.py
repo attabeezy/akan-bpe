@@ -36,7 +36,7 @@ def parse_args() -> argparse.Namespace:
         "--experiment-id",
         default=None,
         help="Stable run identifier. Defaults to a tag derived from the model id and "
-        "embedding-init mode, e.g. run-qwen-0.6b / run-qwen-0.6b-meansub.",
+        "embedding-init mode, e.g. run-qwen-0.6b-mixed / run-qwen-0.6b-mixed-meansub.",
     )
     parser.add_argument(
         "--tokenizer-path",

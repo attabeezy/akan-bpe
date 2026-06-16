@@ -31,23 +31,27 @@ Scripts import the `akan_bpe` package, so install it before running them.
 # 1. Download and normalize datasets into data/
 python scripts/download.py --output-dir data
 
-# 2. Train the Akan TTS tokenizer
-python scripts/train_bpe.py --inputs data/pristine_twi_train.jsonl \
-    --output models/tts_tokenizer.json --name tts
+# 2. Train the balanced mixed Akan tokenizer
+python scripts/train_bpe.py --inputs data/aka_asr_train.jsonl data/pristine_twi_train.jsonl \
+    --output models/mixed_tokenizer.json --name mixed --balance
 
-# 3. Fine-tune a base LLM with the Akan tokenizer (QLoRA on a T4)
+# 3. Fine-tune a base LLM with the mixed Akan tokenizer (QLoRA on a T4)
 python scripts/model_integration.py --model-id Qwen/Qwen3-0.6B-Base
 ```
 
 Step 3 derives sensible defaults (tokenizer, data, output paths, eval cap, LoRA config) from the
-model id — a real run needs only `--model-id`. Add `--embedding-init-mode mean_subword` for the
-warm-start ablation, or `--device-mode smoke` for a tiny CPU pipeline check.
+model id — a real run needs only `--model-id`. Model integration now defaults to the balanced
+`models/mixed_tokenizer.json` tokenizer, replacing the earlier TTS-only integration tokenizer.
+Add `--embedding-init-mode mean_subword` for the warm-start ablation, or `--device-mode smoke`
+for a tiny CPU pipeline check.
 
 `scripts/benchmark_fertility.py` compares the tokenizers against multilingual baselines and
 `scripts/router.py` trains the domain router. Every script takes `--help` for its full options.
 
-The five ladder runs each have a ready-to-run notebook: `notebooks/run-<model>.ipynb`
-(`run-qwen-0.6b`, `run-qwen-1.7b`, `run-gemma-1b`, `run-llama-1b`, `run-aya-base`).
+The ladder notebooks are split into `notebooks/run-full-light.ipynb` and
+`notebooks/run-full-heavy.ipynb`. New mixed-tokenizer reruns write `-mixed` result IDs such as
+`run-qwen-0.6b-mixed` and `run-qwen-0.6b-mixed-meansub` so previous TTS-tokenizer artifacts stay
+available.
 
 ## Metric
 
@@ -75,6 +79,10 @@ results, `mean_subword` improves chrF and chrF++ over `random` in all five model
 `random` on BPB in all five runs, and beats each base model on BPB in all five mean-subword arms.
 The older `results/model-ladder-results.json` remains as a previous baseline artifact, not the
 current source of truth.
+
+Note: the checked-in ladder result artifacts were generated before the integration default moved
+from the TTS tokenizer to the balanced mixed tokenizer. They remain available for comparison and
+will be replaced by mixed-tokenizer result artifacts once the reruns complete.
 
 ## Project Structure
 

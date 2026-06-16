@@ -40,7 +40,7 @@ MODEL_SLUGS = {
 }
 
 # Standard input paths shared by every run; CLI flags override when needed.
-DEFAULT_TOKENIZER_PATH = "models/tts_tokenizer.json"
+DEFAULT_TOKENIZER_PATH = "models/mixed_tokenizer.json"
 DEFAULT_TRAIN_FILE = "data/pristine_twi_train.jsonl"
 DEFAULT_EVAL_FILE = "data/pristine_twi_test.jsonl"
 
@@ -55,12 +55,12 @@ def model_slug(model_id: str) -> str:
 
 
 def derive_experiment_id(model_id: str, embedding_init_mode: str) -> str:
-    """Derive the run tag from model + embedding init, e.g. ``run-qwen-0.6b``.
+    """Derive the run tag from model + embedding init, e.g. ``run-qwen-0.6b-mixed``.
 
     The ``mean_subword`` arm gets a ``-meansub`` suffix so the two ablation arms
     never collide on output dirs or result JSON paths.
     """
-    tag = f"run-{model_slug(model_id)}"
+    tag = f"run-{model_slug(model_id)}-mixed"
     if embedding_init_mode == "mean_subword":
         tag += "-meansub"
     return tag

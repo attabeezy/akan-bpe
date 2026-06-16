@@ -56,26 +56,25 @@ The five ladder runs each have a ready-to-run notebook: `notebooks/run-<model>.i
   across vocabularies, so BPB normalizes each model's total NLL by the fixed UTF-8 byte count of
   the eval text. Scoring uses **full byte coverage** (every byte of every text), so high-fertility
   base tokenizers are compared honestly against the Akan tokenizer.
+- **chrF / chrF++** — held-out Twi continuation quality for M4 generation evaluation. The
+  executed notebooks score 512 examples per arm using 48 prompt words, 64 reference words, and
+  64 generated tokens.
 
 ## Model Ladder Results
 
-The 5-model QLoRA ladder has been re-scored with the corrected full-coverage BPB metric. Full
-run payloads and a combined machine-readable artifact are tracked in
-`results/model-ladder-results.json`; the source notebooks preserve the original printed JSON
-blocks used for recovery.
+The executed split notebooks are the source of truth for the current 5-model QLoRA ladder:
+`notebooks/run-full-light.ipynb` and `notebooks/run-full-heavy.ipynb`. The derived combined
+artifact is `results/notebook-ladder-results.json`, generated with:
 
-| Model | Arm | Base fert. | Akan fert. | Token reduction | Base BPB | Akan BPB | BPB improvement | Perplexity |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| `qwen-0.6b` | `random` | 2.530 | 1.259 | 50.3% | 2.9523 | 1.4805 | +1.4718 | 82.68 |
-| `qwen-0.6b` | `mean_subword` | 2.530 | 1.259 | 50.3% | 2.9523 | 1.2832 | +1.6691 | 45.28 |
-| `qwen-1.7b` | `random` | 2.530 | 1.259 | 50.3% | 2.7556 | 1.4741 | +1.2815 | 82.36 |
-| `qwen-1.7b` | `mean_subword` | 2.530 | 1.259 | 50.3% | 2.7556 | 1.2478 | +1.5078 | 40.93 |
-| `gemma-1b` | `random` | 2.284 | 1.259 | 44.9% | 3.3907 | 1.4841 | +1.9067 | 87.14 |
-| `gemma-1b` | `mean_subword` | 2.284 | 1.259 | 44.9% | 3.3907 | 1.2355 | +2.1553 | 39.27 |
-| `llama-1b` | `random` | 3.073 | 1.259 | 59.0% | 2.4480 | 1.4150 | +1.0330 | 69.09 |
-| `llama-1b` | `mean_subword` | 3.073 | 1.259 | 59.0% | 2.4480 | 1.2337 | +1.2143 | 39.24 |
-| `aya-base` | `random` | 2.975 | 1.259 | 57.7% | 2.7129 | 1.4755 | +1.2374 | 82.49 |
-| `aya-base` | `mean_subword` | 2.975 | 1.259 | 57.7% | 2.7129 | 1.2323 | +1.4806 | 38.84 |
+```bash
+python scripts/extract_notebook_results.py
+```
+
+The artifact preserves the full notebook payloads plus a flattened summary. In the notebook-derived
+results, `mean_subword` improves chrF and chrF++ over `random` in all five model runs, beats
+`random` on BPB in all five runs, and beats each base model on BPB in all five mean-subword arms.
+The older `results/model-ladder-results.json` remains as a previous baseline artifact, not the
+current source of truth.
 
 ## Project Structure
 
@@ -98,7 +97,7 @@ Datasets and large model artifacts are generated locally and gitignored.
 - [x] Model-integration ladder — 5 QLoRA runs across 4 families on Kaggle/T4
 - [x] Bits-per-byte metric with full byte coverage + mean-of-subword embedding-init ablation
 - [x] Re-score the ladder under the corrected BPB metric
-- [ ] Generation quality (chrF on held-out Twi)
+- [x] Generation quality (chrF on held-out Twi)
 - [ ] IEEE Ghana ICAST 2026 write-up
 
 ## License

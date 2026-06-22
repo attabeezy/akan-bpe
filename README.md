@@ -48,8 +48,14 @@ for a tiny CPU pipeline check.
 `scripts/benchmark_fertility.py` compares the tokenizers against multilingual baselines and
 `scripts/router.py` trains the domain router. Every script takes `--help` for its full options.
 
-The ladder notebooks are split into `notebooks/run-full-light.ipynb` and
-`notebooks/run-full-heavy.ipynb`. New mixed-tokenizer reruns write `-mixed` result IDs such as
+The ladder notebooks are split into two halves — open them directly on Kaggle (T4 GPU) or preview on nbviewer:
+
+| Notebook | nbviewer | Kaggle |
+|----------|----------|--------|
+| Light (Qwen3-0.6B, Llama-3.2-1B, tiny-aya) | [![nbviewer](https://img.shields.io/badge/render-nbviewer-orange?logo=jupyter)](https://nbviewer.org/github/attabeezy/akan-bpe/blob/main/notebooks/run-full-light.ipynb) | [![Open in Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://kaggle.com/kernels/welcome?src=https://github.com/attabeezy/akan-bpe/blob/main/notebooks/run-full-light.ipynb) |
+| Heavy (Qwen3-1.7B, Gemma-3-1B) | [![nbviewer](https://img.shields.io/badge/render-nbviewer-orange?logo=jupyter)](https://nbviewer.org/github/attabeezy/akan-bpe/blob/main/notebooks/run-full-heavy.ipynb) | [![Open in Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://kaggle.com/kernels/welcome?src=https://github.com/attabeezy/akan-bpe/blob/main/notebooks/run-full-heavy.ipynb) |
+
+New mixed-tokenizer reruns write `-mixed` result IDs such as
 `run-qwen-0.6b-mixed` and `run-qwen-0.6b-mixed-meansub` so previous TTS-tokenizer artifacts stay
 available.
 

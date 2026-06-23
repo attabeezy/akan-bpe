@@ -106,6 +106,57 @@ def test_extract_notebook_payload_reads_full_json_block(tmp_path: Path) -> None:
     assert extracted["model_slugs"] == ["qwen-0.6b"]
 
 
+def test_extract_notebook_payload_reconstructs_from_arm_blocks(tmp_path: Path) -> None:
+    random_payload = {
+        "experiment_id": "run-qwen-0.6b-mixed",
+        "model_id": "dummy/base",
+        "embedding_init_mode": "random",
+        "token_count_comparison": {
+            "base_model_tokenizer": {"fertility": 2.5},
+            "experiment_tokenizer": {"fertility": 1.25},
+            "token_reduction_ratio": 0.5,
+        },
+        "eval": {
+            "eval_loss": 4.0,
+            "perplexity": 55.0,
+            "bpb": {
+                "experiment": {"bits_per_byte": 1.5},
+                "base": {"bits_per_byte": 2.5},
+                "improvement": 1.0,
+            },
+            "generation_quality": {
+                "chrf": 12.0,
+                "chrfpp": 12.5,
+                "num_examples": 512,
+                "prompt_words": 48,
+                "reference_words": 64,
+                "max_new_tokens": 64,
+            },
+        },
+    }
+    mean_payload = {
+        **random_payload,
+        "experiment_id": "run-qwen-0.6b-mixed-meansub",
+        "embedding_init_mode": "mean_subword",
+    }
+    notebook_path = tmp_path / "run-full-light.ipynb"
+    _write_notebook(
+        notebook_path,
+        "noise\nBEGIN_FULL_JSON random\n"
+        + json.dumps(random_payload)
+        + "\nEND_FULL_JSON random\nBEGIN_FULL_JSON mean_subword\n"
+        + json.dumps(mean_payload)
+        + "\nEND_FULL_JSON mean_subword\n",
+    )
+
+    extracted = extract_notebook_payload(notebook_path)
+
+    assert extracted["split"] == "light"
+    assert extracted["model_slugs"] == ["qwen-0.6b"]
+    assert set(extracted["summary"]["qwen-0.6b"]) == {"random", "mean_subword"}
+    assert extracted["runs"]["qwen-0.6b"]["mean_subword"]["experiment_id"].endswith("-meansub")
+
+
 def test_build_notebook_results_flattens_summary_and_interpretation(tmp_path: Path) -> None:
     light_path = tmp_path / "run-full-light.ipynb"
     heavy_path = tmp_path / "run-full-heavy.ipynb"

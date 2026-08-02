@@ -1,0 +1,15 @@
+{
+  "config": "config/router_config.json",
+  "test_file": "data/revision_v2/aka_asr_test.jsonl",
+  "total_samples": 1010,
+  "routing_decisions": {
+    "asr": 1010,
+    "tts": 0,
+    "mixed": 0
+  },
+  "percentages": {
+    "asr": 100.0,
+    "tts": 0.0,
+    "mixed": 0.0
+  }
+}

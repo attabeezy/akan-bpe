@@ -1,0 +1,600 @@
+schema_version: 1
+
+project:
+  name: akan-bpe
+  language: Akan (Twi)
+  venue: IEEE Ghana ICAST 2026
+  purpose: Reproducibility record for the July 2026 reviewer revision
+  manifest_role: audit_only
+  frozen_on: 2026-07-30
+  timezone: Atlantic/Reykjavik
+
+repository:
+  baseline_commit: cf78efb3607ebcd3e712a45d9b58537d28bf3e65
+  working_tree_at_freeze: modified
+  note: >-
+    The baseline commit identifies the checked-in code lineage. Frozen datasets and
+    research artifacts are identified independently by their SHA-256 digests below.
+
+naming:
+  new_run_id_template: "{model}__{strategy}__v{vocab_size}__{init}__e{epochs}__s{seed}"
+  new_run_id_pattern: "^[a-z0-9.-]+__(original|replacement|extension)__v[0-9]+__(random|mean_subword|preserved)__e[0-9]+(?:\\.[0-9]+)?__s[0-9]+$"
+  historical_policy: Existing run IDs and filenames remain unchanged.
+
+environments:
+  local_validation:
+    status: recorded
+    operating_system: Windows
+    python: 3.13.5
+    packages:
+      datasets: 5.0.0
+      transformers: 5.12.1
+      tokenizers: 0.22.2
+      scikit-learn: 1.9.0
+      numpy: 2.5.0
+      PyYAML: 6.0.3
+      protobuf: 7.35.1
+  executed_gpu_runs:
+    status: partially_recorded
+    hardware: NVIDIA Tesla T4
+    execution_surface: Kaggle split notebooks
+    package_versions:
+      status: not_recorded
+      note: Exact package versions were not retained in the executed result payloads.
+
+datasets:
+  - id: aka_asr_train
+    corpus: WaxalNLP aka_asr
+    split: train
+    path: data/aka_asr_train.jsonl
+    rows: 8085
+    bytes: 2216176
+    sha256: 77386d21e076af67ff1261aaa0d83148c4ba82adad3e9c516b1d2a8ac971588a
+    source_field: aka_asr
+    license_status: pending_verification
+  - id: aka_asr_validation
+    corpus: WaxalNLP aka_asr
+    split: validation
+    path: data/aka_asr_validation.jsonl
+    rows: 1011
+    bytes: 275110
+    sha256: f9ba07f5539600330e5e9c3d3b6e2c1bbbff96595b87bdd97d963bff5e728d08
+    source_field: aka_asr
+    license_status: pending_verification
+  - id: aka_asr_test_revision_v2
+    corpus: WaxalNLP aka_asr
+    split: test
+    version: revision_v2
+    path: data/revision_v2/aka_asr_test.jsonl
+    rows: 1010
+    bytes: 274522
+    sha256: 2bce5ef6ac3b9ea73e03af17a9e0ac5a907fb816ebf5ca70972588469c405111
+    source_field: aka_asr
+    license_status: pending_verification
+  - id: pristine_twi_train
+    corpus: Pristine-Twi
+    split: train
+    path: data/pristine_twi_train.jsonl
+    rows: 45000
+    bytes: 71933805
+    sha256: f7f86273ce2fe83fb17b578ac030924e3853f356872918dc63da27edf3c146da
+    source_field: pristine_twi
+    license_status: pending_verification
+  - id: pristine_twi_validation
+    corpus: Pristine-Twi
+    split: validation
+    path: data/pristine_twi_validation.jsonl
+    rows: 2500
+    bytes: 3994502
+    sha256: 55b20e03605c7be07086bb39a753629a934d19a63ae61e682e2f683aa1a6c0c8
+    source_field: pristine_twi
+    license_status: pending_verification
+  - id: pristine_twi_test
+    corpus: Pristine-Twi
+    split: test
+    path: data/pristine_twi_test.jsonl
+    rows: 2500
+    bytes: 3994133
+    sha256: cd7380ed5603e950943eae5e8b69a9fd7733da809bb67d26a739e9482e146214
+    source_field: pristine_twi
+    license_status: pending_verification
+
+protocols:
+  dataset_split:
+    algorithm: deterministic local 80/10/10 split
+    seed: 42
+    row_schema:
+      id: non-empty string
+      text: non-empty string
+      source: corpus identifier
+    leakage_rule: >-
+      New frozen splits must have no duplicate IDs and no NFC, whitespace-collapsed,
+      case-folded text overlap between any training split and validation/test split.
+      Historical exceptions must be identified by normalized-text SHA-256 below.
+  tokenizer_training:
+    implementation: Hugging Face tokenizers
+    algorithm: BPE
+    normalization: none
+    pre_tokenizer: Whitespace
+    unknown_token: "[UNK]"
+    minimum_frequency: 0
+    special_tokens:
+      - "[PAD]"
+      - "[UNK]"
+      - "[CLS]"
+      - "[SEP]"
+      - "[MASK]"
+      - "<s>"
+      - "</s>"
+      - "<pad>"
+    primary_vocab_size: 8000
+    mixed_corpus_balance: Upsample each input corpus to 45000 rows, then concatenate.
+    random_seed:
+      status: not_recorded
+      note: The tokenizers BPE trainer invocation did not expose or record a seed.
+  tokenizer_evaluation:
+    regimes:
+      asr: aka_asr_test_revision_v2
+      formal: pristine_twi_test
+    fertility_formula: total_tokens / total_whitespace_words
+    baselines:
+      - xlm-roberta-base
+      - bert-base-multilingual-cased
+      - google/mt5-base
+  model_training:
+    strategy: full vocabulary replacement
+    tokenizer: mixed_tokenizer
+    train_dataset: pristine_twi_train
+    evaluation_dataset: pristine_twi_test
+    max_train_samples: 4096
+    max_eval_samples: 512
+    max_length: 256
+    per_device_batch_size: 1
+    gradient_accumulation_steps: 16
+    epochs: 1.0
+    learning_rate: 0.0002
+    quantization:
+      bits: 4
+      type: nf4
+      double_quantization: true
+      compute_dtype: float16
+    qlora:
+      rank: 16
+      alpha: 32
+      dropout: 0.05
+      bias: none
+      task_type: CAUSAL_LM
+      target_modules:
+        - q_proj
+        - k_proj
+        - v_proj
+        - o_proj
+        - gate_proj
+        - up_proj
+        - down_proj
+      modules_to_save:
+        - embed_tokens
+        - lm_head
+    optimizer_and_scheduler:
+      status: not_recorded
+      note: Historical artifacts did not export all Transformers TrainingArguments defaults.
+    model_revision:
+      status: not_recorded
+      note: Hugging Face commit revisions were not pinned in historical runs.
+  bpb_evaluation:
+    name: corrected full-coverage bits per UTF-8 byte
+    formula: total token negative log-likelihood in nats / ln(2) / evaluated UTF-8 bytes
+    coverage: 100 percent of the same evaluation text for both tokenizers
+    chunking: non-overlapping token chunks with one-token context handling
+    max_length: 256
+  generation_evaluation:
+    metrics:
+      chrf: sacrebleu.CHRF with word_order 0
+      chrfpp: sacrebleu.CHRF with word_order 2
+    examples: 512
+    prompt_words: 48
+    reference_words: 64
+    max_new_tokens: 64
+    batch_size: 4
+    decoding:
+      do_sample: false
+      num_beams: 1
+      temperature: not_applicable
+      top_p: not_applicable
+      top_k: not_applicable
+      repetition_penalty: transformers_default
+      stop_tokens: tokenizer_eos_and_pad_defaults
+
+active_protocol:
+  version: revision_v2
+  zero_active_leakage_exceptions: true
+  asr_test_dataset: aka_asr_test_revision_v2
+  formal_test_dataset: pristine_twi_test
+  locked_vocab_size_for_new_experiments: 32000
+  vocabulary_lock_basis: vocab_ablation_results
+
+historical_deviations:
+  - normalized_text_sha256: 8eaa78663e83daf1e9eaf897af2468f67580636041af808160d4927a1fc7e2e6
+    train_location: data/aka_asr_train.jsonl:4250
+    evaluation_location: data/aka_asr_test.jsonl:368
+    train_id: ak_gh_image_0075_u238_1_1679865194560_EkuNLo2_04077
+    evaluation_id: ak_gh_image_0075_u238_1_1679865194560_EhjBkzF_00912
+    status: corrected_in_revision_v2
+    reason: Removed from the active v2 test set without changing training inputs.
+
+artifacts:
+  download_manifest:
+    kind: historical_dataset_manifest
+    path: data/download_manifest.json
+    bytes: 606
+    sha256: fbaa41607c10d554d61be0db82dd33eb35f91d704252b27d8def73f1c5397fe7
+  historical_asr_test_v1:
+    kind: historical_dataset
+    path: data/aka_asr_test.jsonl
+    bytes: 275803
+    sha256: 4a682f1f8b8ec9c65e8d5f5c7d99aa592c033959401a387516dc3400acdc488b
+  asr_test_v2_correction:
+    kind: dataset_correction
+    path: data/revision_v2/asr_test_correction.json
+    bytes: 1066
+    sha256: a77e16abf4d2d272a3cc0622ecff5ccdb33b6860a3e5508ae4d06bf3012b77d9
+    assertions:
+      - path: source.rows
+        equals: 1011
+      - path: output.rows
+        equals: 1010
+      - path: output.sha256
+        equals: 2bce5ef6ac3b9ea73e03af17a9e0ac5a907fb816ebf5ca70972588469c405111
+  asr_tokenizer:
+    kind: tokenizer
+    path: models/asr_tokenizer.json
+    bytes: 574276
+    sha256: 8b45f746c2d7b870556f8de5117adf40a28e9150c061844a067bc304a1db4748
+  asr_tokenizer_stats:
+    kind: tokenizer_metadata
+    path: models/asr_tokenizer_stats.json
+    bytes: 1315
+    sha256: 2c155ad7df5f0bbc1a9f9a93c7ae510e1814ae6134c0bf9f2541ca237d3cb422
+  tts_tokenizer:
+    kind: tokenizer
+    path: models/tts_tokenizer.json
+    bytes: 526950
+    sha256: 15dd18cc51bf6d0b524d6f2efa5d17f90bcc539b4ce8768c4488ac17f45910f1
+  tts_tokenizer_stats:
+    kind: tokenizer_metadata
+    path: models/tts_tokenizer_stats.json
+    bytes: 11956
+    sha256: f9ffd0a2f38c7167c0abf0d4561da5d8714d15a167c8882b487cb50f51a58d0f
+  mixed_tokenizer:
+    kind: tokenizer
+    path: models/mixed_tokenizer.json
+    bytes: 565856
+    sha256: a3282100667adbb61f31917985274507c41d0f63830246e6a3eb9d0712f9915c
+  mixed_tokenizer_stats:
+    kind: tokenizer_metadata
+    path: models/mixed_tokenizer_stats.json
+    bytes: 12549
+    sha256: d402705e2c19e52de8597fb7493193557df48e85d6f17aed89e3c28437333706
+  fertility_results:
+    kind: historical_result
+    path: results/tokenizer_fertility_experiment_001.json
+    bytes: 5801
+    sha256: f5d309c225bfb57858fbb635f01f634decc88449908a6f5e284252e2127668e2
+  fertility_results_revision_v2:
+    kind: active_fertility_result
+    path: results/tokenizer_fertility_revision_v2.json
+    bytes: 5882
+    sha256: 0883e3f3439547ad7d31168b224e452b591038921d456a66636e387618b46ddf
+    assertions:
+      - path: experiment_id
+        equals: tokenizer_fertility_revision_v2
+      - path: test_sets.asr_test
+        equals: data/revision_v2/aka_asr_test.jsonl
+      - path: results.*.asr_test.num_samples
+        equals: 1010
+  light_notebook:
+    kind: executed_notebook_source
+    path: notebooks/run-full-light.ipynb
+    bytes: 5076829
+    sha256: 33f04535e1fd34f56efdf6f9a9d965a0b65886c792958829c1c660321213b863
+  heavy_notebook:
+    kind: executed_notebook_source
+    path: notebooks/run-full-heavy.ipynb
+    bytes: 6786830
+    sha256: 9638b81bfb2e38cbcc13c4b9a5bcd4edf0d1f6ab95c856907af0395d9d9f0212
+  notebook_ladder:
+    kind: aggregate_result
+    path: results/notebook-ladder-results.json
+    bytes: 16769724
+    sha256: 60c95ce549f6660a2db2ca0a9b5701c501f814f3cdfa50156bf218e2ba6c70c3
+  router_config:
+    kind: router_configuration
+    path: config/router_config.json
+    bytes: 218
+    sha256: 40778a88fe7331ad705ee97b93ece0c44e781dd7d159f615f953e08c66dafa8d
+  router_classifier:
+    kind: router_model
+    path: models/router_classifier.pkl
+    bytes: 232188
+    sha256: 76c40d75bcdaaa87bedc1d11dae02baadd94cd41dd8081b571734d783af4305b
+  router_fertility_results:
+    kind: result
+    path: results/router_fertility_comparison.json
+    bytes: 281
+    sha256: 6771239dd018fb01fb53ac4d880d0d6cab4d2546d74c35da69190481d2f21094
+  router_asr_revision_v2:
+    kind: active_router_result
+    path: results/router_asr_revision_v2.json
+    bytes: 315
+    sha256: f0326c018da8b44578fa098a5ebecd94ccb879dd1c9742d0ed8b274953111f7b
+    assertions:
+      - path: test_file
+        equals: data/revision_v2/aka_asr_test.jsonl
+      - path: total_samples
+        equals: 1010
+  router_ml_asr_revision_v2:
+    kind: active_router_result
+    path: results/router_ml_asr_revision_v2.json
+    bytes: 287
+    sha256: c232bc7d54716cdb616ab84db0a825a623c0b511a251ae7eb51a41cfaf0c6215
+    assertions:
+      - path: test_file
+        equals: data/revision_v2/aka_asr_test.jsonl
+      - path: total_samples
+        equals: 1010
+  asr_split_revision_v1_vs_v2:
+    kind: scientific_checkpoint
+    path: results/asr_split_revision_v1_vs_v2.json
+    bytes: 8454
+    sha256: b79c5060dac2a926333b378d8914a287137290278f401eddd7dc073cd55c6dd2
+    assertions:
+      - path: comparison_id
+        equals: asr_split_revision_v1_vs_v2
+      - path: decision.material_change
+        equals: false
+      - path: decision.best_tokenizers.unchanged
+        equals: true
+      - path: decision.mixed_deployment_viable.unchanged
+        equals: true
+      - path: decision.model_ladder_disposition
+        equals: retain_existing_model_ladder
+  asr_split_revision_v1_vs_v2_summary:
+    kind: scientific_checkpoint_summary
+    path: results/asr_split_revision_v1_vs_v2.md
+    bytes: 1453
+    sha256: 9b89e73259a52cdea40d57dfca4600f2aca726775a5001d21ac3191a270b93d8
+  mixed_bpe_revision_v2_v4000:
+    kind: tokenizer_ablation_artifact
+    path: models/revision_v2/mixed_bpe_v4000.json
+    bytes: 256132
+    sha256: 681a4ae31fabf1fe1ea107396cdba37ecf0e10f0ef5b215d62620f109cd5613d
+  mixed_bpe_revision_v2_v8000:
+    kind: tokenizer_ablation_artifact
+    path: models/revision_v2/mixed_bpe_v8000.json
+    bytes: 526466
+    sha256: 8224d9a97e68fb97e2a22f64af997e7c4387d007db4f0420ece16898c1dd00b1
+  mixed_bpe_revision_v2_v16000:
+    kind: tokenizer_ablation_artifact
+    path: models/revision_v2/mixed_bpe_v16000.json
+    bytes: 1078338
+    sha256: d87a246cb663951f16df9197e60f7780d977a93010fdddd8d6aab2b5e8ecca22
+  mixed_bpe_revision_v2_v32000:
+    kind: tokenizer_ablation_artifact
+    path: models/revision_v2/mixed_bpe_v32000.json
+    bytes: 2198994
+    sha256: fd7dd72846b012bb3206dbd330436722b98664a26741adb83dc56c271e493bc4
+  vocab_ablation_results:
+    kind: active_tokenizer_ablation_result
+    path: results/vocab_ablation_results.json
+    bytes: 37306
+    sha256: c528cc605d28ee29d80de88cc32bab211d53528415abee2f42e6816efa73733a
+    assertions:
+      - path: experiment_id
+        equals: balanced_mixed_bpe_vocab_ablation_revision_v2
+      - path: protocol.test_files.asr.path
+        equals: data/revision_v2/aka_asr_test.jsonl
+      - path: protocol.test_files.asr.rows
+        equals: 1010
+      - path: protocol.test_files.formal.rows
+        equals: 2500
+      - path: metrics.*.asr.num_samples
+        equals: 1010
+      - path: metrics.*.formal.num_samples
+        equals: 2500
+      - path: historical_8k_compatibility.vocabularies_equal
+        equals: true
+      - path: historical_8k_compatibility.exact_test_encoding_match
+        equals: true
+      - path: operating_point.selected_vocab_size
+        equals: 32000
+      - path: operating_point.status
+        equals: boundary_selected_no_earlier_plateau
+  vocab_ablation_tradeoff:
+    kind: active_tokenizer_ablation_table
+    path: results/vocab_ablation_tradeoff.md
+    bytes: 1121
+    sha256: f3d8a24f3c5b37821d0fa9402b076c152a6ac256805cc2866e042965acd353a4
+  vocab_ablation_fertility_svg:
+    kind: active_tokenizer_ablation_figure
+    path: results/vocab_ablation_fertility.svg
+    bytes: 14699
+    sha256: 6da6d12d834c45c66effbe31fd80bbae3e45417d23b388e9deb4ecde9134323d
+  vocab_ablation_fertility_png:
+    kind: active_tokenizer_ablation_figure
+    path: results/vocab_ablation_fertility.png
+    bytes: 103223
+    sha256: 849c6bb05ab8a3a780e193befed22f92d906940cc99438c5d689ae405fd5f231
+  technical_report:
+    kind: manuscript_source
+    path: docs/report.md
+    bytes: 37818
+    sha256: 7a97bfcf696343afa8c7a01da965c617c4c36acf642feeb293f5d286a2c64f44
+
+runs:
+  - id: run-qwen-0.6b-mixed
+    id_style: historical
+    status: completed
+    model_id: Qwen/Qwen3-0.6B-Base
+    strategy: replacement
+    vocab_size: 8000
+    initialization: random
+    epochs: 1.0
+    seed: &unrecorded_seed
+      status: not_recorded
+      note: Seed was not exported into the historical result payload.
+    result_artifact: notebook_ladder
+  - id: run-qwen-0.6b-mixed-meansub
+    id_style: historical
+    status: completed
+    model_id: Qwen/Qwen3-0.6B-Base
+    strategy: replacement
+    vocab_size: 8000
+    initialization: mean_subword
+    epochs: 1.0
+    seed: *unrecorded_seed
+    result_artifact: notebook_ladder
+  - id: run-qwen-1.7b-mixed
+    id_style: historical
+    status: completed
+    model_id: Qwen/Qwen3-1.7B-Base
+    strategy: replacement
+    vocab_size: 8000
+    initialization: random
+    epochs: 1.0
+    seed: *unrecorded_seed
+    result_artifact: notebook_ladder
+  - id: run-qwen-1.7b-mixed-meansub
+    id_style: historical
+    status: completed
+    model_id: Qwen/Qwen3-1.7B-Base
+    strategy: replacement
+    vocab_size: 8000
+    initialization: mean_subword
+    epochs: 1.0
+    seed: *unrecorded_seed
+    result_artifact: notebook_ladder
+  - id: run-gemma-1b-mixed
+    id_style: historical
+    status: completed
+    model_id: google/gemma-3-1b-pt
+    strategy: replacement
+    vocab_size: 8000
+    initialization: random
+    epochs: 1.0
+    seed: *unrecorded_seed
+    result_artifact: notebook_ladder
+  - id: run-gemma-1b-mixed-meansub
+    id_style: historical
+    status: completed
+    model_id: google/gemma-3-1b-pt
+    strategy: replacement
+    vocab_size: 8000
+    initialization: mean_subword
+    epochs: 1.0
+    seed: *unrecorded_seed
+    result_artifact: notebook_ladder
+  - id: run-llama-1b-mixed
+    id_style: historical
+    status: completed
+    model_id: meta-llama/Llama-3.2-1B
+    strategy: replacement
+    vocab_size: 8000
+    initialization: random
+    epochs: 1.0
+    seed: *unrecorded_seed
+    result_artifact: notebook_ladder
+  - id: run-llama-1b-mixed-meansub
+    id_style: historical
+    status: completed
+    model_id: meta-llama/Llama-3.2-1B
+    strategy: replacement
+    vocab_size: 8000
+    initialization: mean_subword
+    epochs: 1.0
+    seed: *unrecorded_seed
+    result_artifact: notebook_ladder
+  - id: run-aya-base-mixed
+    id_style: historical
+    status: completed
+    model_id: CohereLabs/tiny-aya-base
+    strategy: replacement
+    vocab_size: 8000
+    initialization: random
+    epochs: 1.0
+    seed: *unrecorded_seed
+    result_artifact: notebook_ladder
+  - id: run-aya-base-mixed-meansub
+    id_style: historical
+    status: completed
+    model_id: CohereLabs/tiny-aya-base
+    strategy: replacement
+    vocab_size: 8000
+    initialization: mean_subword
+    epochs: 1.0
+    seed: *unrecorded_seed
+    result_artifact: notebook_ladder
+
+planned_revision:
+  operating_point_rule: >-
+    Prefer the smallest vocabulary on the fertility plateau unless controlled model
+    quality shows a material disadvantage.
+  vocabulary_ablation:
+    status: completed
+    result_artifact: vocab_ablation_results
+    strategy: replacement
+    vocab_sizes:
+      - 4000
+      - 8000
+      - 16000
+      - 32000
+    test_regimes:
+      - aka_asr_test_revision_v2
+      - pristine_twi_test
+    selected_vocab_size: 32000
+    selection_status: boundary_selected_no_earlier_plateau
+    conclusion: >-
+      The predeclared 1-percent two-domain rule selects 32000 for extension and
+      multi-seed experiments. This is a boundary selection, not evidence of a fully
+      observed plateau, and controlled model-quality evidence may override it.
+  vocabulary_extension:
+    anchor_model: Qwen/Qwen3-0.6B-Base
+    vocab_size: 32000
+    comparison:
+      - original
+      - extension
+      - replacement
+    initialization: mean_subword
+    extension_budgets:
+      status: pending_decision
+      note: Extension token budgets will be frozen before implementation.
+  multi_seed:
+    vocab_size: 32000
+    seeds:
+      - 17
+      - 42
+      - 73
+    models:
+      - Qwen/Qwen3-0.6B-Base
+      - Qwen/Qwen3-1.7B-Base
+    initializations:
+      - random
+      - mean_subword
+    strategy: replacement
+
+run_log:
+  completed: 10
+  failed: []
+  excluded: []
+  policy: Failed or excluded revision runs must remain listed with a reason.
+
+limitations:
+  - Exact Kaggle package versions were not retained.
+  - Historical model revisions were not pinned to Hugging Face commit SHAs.
+  - Historical result payloads omitted the training seed.
+  - Optimizer, scheduler, warmup, weight decay, and clipping defaults were not fully exported.
+  - Dataset and model licenses require final manuscript verification.
+  - This audit manifest does not yet drive experiment execution.
+  - One normalized ASR sentence overlapped the historical v1 training and test splits; the
+    active revision-v2 test set removes it and has no leakage exceptions.
+  - The historical router classifier was serialized with scikit-learn 1.8.0 and evaluated
+    under 1.9.0 with an InconsistentVersionWarning; routing is a secondary analysis.

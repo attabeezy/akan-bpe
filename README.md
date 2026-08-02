@@ -28,6 +28,27 @@ python scripts/model_integration.py --model-id Qwen/Qwen3-0.6B-Base
 
 See [`docs/project.md`](docs/project.md) for full script options, flag reference, and experiment design.
 
+## Revision Audit
+
+The reviewer-revision protocol and preserved artifact hashes live in
+[`config/revision_manifest.yaml`](config/revision_manifest.yaml). Validate the frozen datasets,
+tokenizers, notebooks, and result artifacts without modifying them:
+
+```bash
+python scripts/validate_revision_manifest.py
+```
+
+The manifest records unavailable historical metadata explicitly and audits the one known
+train/test text overlap in the historical ASR split. Revision v2 removes exactly that historical
+test row, freezes the active ASR test at 1,010 rows, and rejects every active leakage exception.
+New or unacknowledged overlap fails validation.
+
+The tokenizer-only vocabulary ablation is also complete. The fixed two-domain 1% plateau rule
+selects 32K for new extension and multi-seed experiments, although this is a boundary selection
+rather than evidence that the curve has fully plateaued. See
+[`results/vocab_ablation_tradeoff.md`](results/vocab_ablation_tradeoff.md) and
+[`results/vocab_ablation_fertility.svg`](results/vocab_ablation_fertility.svg).
+
 ## Notebooks
 
 | Notebook | nbviewer | Colab | Kaggle |
@@ -54,6 +75,9 @@ akan-bpe/
 - [x] Bits-per-byte metric with full byte coverage + mean-of-subword embedding-init ablation
 - [x] Re-score the ladder under the corrected BPB metric
 - [x] Generation quality (chrF on held-out Twi)
+- [x] Revision artifact manifest and integrity validator
+- [x] Leak-free ASR revision-v2 split and v1-v2 scientific checkpoint
+- [x] Balanced 4K/8K/16K/32K vocabulary-size ablation
 - [ ] IEEE Ghana ICAST 2026 write-up
 
 ## License

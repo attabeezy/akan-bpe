@@ -1,0 +1,1166 @@
+{
+  "schema_version": 1,
+  "experiment_id": "balanced_mixed_bpe_vocab_ablation_revision_v2",
+  "protocol": {
+    "vocab_sizes": [
+      4000,
+      8000,
+      16000,
+      32000
+    ],
+    "varied_factor": "target_vocab_size_only",
+    "training_files": [
+      "data/aka_asr_train.jsonl",
+      "data/pristine_twi_train.jsonl"
+    ],
+    "training_file_sha256": {
+      "data/aka_asr_train.jsonl": "77386d21e076af67ff1261aaa0d83148c4ba82adad3e9c516b1d2a8ac971588a",
+      "data/pristine_twi_train.jsonl": "f7f86273ce2fe83fb17b578ac030924e3853f356872918dc63da27edf3c146da"
+    },
+    "test_files": {
+      "asr": {
+        "path": "data/revision_v2/aka_asr_test.jsonl",
+        "rows": 1010,
+        "sha256": "2bce5ef6ac3b9ea73e03af17a9e0ac5a907fb816ebf5ca70972588469c405111"
+      },
+      "formal": {
+        "path": "data/pristine_twi_test.jsonl",
+        "rows": 2500,
+        "sha256": "cd7380ed5603e950943eae5e8b69a9fd7733da809bb67d26a739e9482e146214"
+      }
+    },
+    "bootstrap": {
+      "method": "paired row resampling of aggregate fertility difference",
+      "resamples": 1000,
+      "seed": 20260730,
+      "confidence_level": 0.95
+    }
+  },
+  "tokenizer_artifacts": [
+    {
+      "target_vocab_size": 4000,
+      "actual_vocab_size": 4000,
+      "path": "models/revision_v2/mixed_bpe_v4000.json",
+      "bytes": 256132,
+      "sha256": "681a4ae31fabf1fe1ea107396cdba37ecf0e10f0ef5b215d62620f109cd5613d",
+      "training_rows": 90000,
+      "input_files": [
+        "data/aka_asr_train.jsonl",
+        "data/pristine_twi_train.jsonl"
+      ],
+      "original_row_counts": {
+        "data/aka_asr_train.jsonl": 8085,
+        "data/pristine_twi_train.jsonl": 45000
+      },
+      "balance_rule": "upsample_each_corpus_to_largest_then_concatenate",
+      "algorithm": "BPE",
+      "normalization": "none",
+      "pre_tokenizer": "Whitespace",
+      "minimum_frequency": 0,
+      "special_tokens": [
+        "[PAD]",
+        "[UNK]",
+        "[CLS]",
+        "[SEP]",
+        "[MASK]",
+        "<s>",
+        "</s>",
+        "<pad>"
+      ]
+    },
+    {
+      "target_vocab_size": 8000,
+      "actual_vocab_size": 8000,
+      "path": "models/revision_v2/mixed_bpe_v8000.json",
+      "bytes": 526466,
+      "sha256": "8224d9a97e68fb97e2a22f64af997e7c4387d007db4f0420ece16898c1dd00b1",
+      "training_rows": 90000,
+      "input_files": [
+        "data/aka_asr_train.jsonl",
+        "data/pristine_twi_train.jsonl"
+      ],
+      "original_row_counts": {
+        "data/aka_asr_train.jsonl": 8085,
+        "data/pristine_twi_train.jsonl": 45000
+      },
+      "balance_rule": "upsample_each_corpus_to_largest_then_concatenate",
+      "algorithm": "BPE",
+      "normalization": "none",
+      "pre_tokenizer": "Whitespace",
+      "minimum_frequency": 0,
+      "special_tokens": [
+        "[PAD]",
+        "[UNK]",
+        "[CLS]",
+        "[SEP]",
+        "[MASK]",
+        "<s>",
+        "</s>",
+        "<pad>"
+      ]
+    },
+    {
+      "target_vocab_size": 16000,
+      "actual_vocab_size": 16000,
+      "path": "models/revision_v2/mixed_bpe_v16000.json",
+      "bytes": 1078338,
+      "sha256": "d87a246cb663951f16df9197e60f7780d977a93010fdddd8d6aab2b5e8ecca22",
+      "training_rows": 90000,
+      "input_files": [
+        "data/aka_asr_train.jsonl",
+        "data/pristine_twi_train.jsonl"
+      ],
+      "original_row_counts": {
+        "data/aka_asr_train.jsonl": 8085,
+        "data/pristine_twi_train.jsonl": 45000
+      },
+      "balance_rule": "upsample_each_corpus_to_largest_then_concatenate",
+      "algorithm": "BPE",
+      "normalization": "none",
+      "pre_tokenizer": "Whitespace",
+      "minimum_frequency": 0,
+      "special_tokens": [
+        "[PAD]",
+        "[UNK]",
+        "[CLS]",
+        "[SEP]",
+        "[MASK]",
+        "<s>",
+        "</s>",
+        "<pad>"
+      ]
+    },
+    {
+      "target_vocab_size": 32000,
+      "actual_vocab_size": 32000,
+      "path": "models/revision_v2/mixed_bpe_v32000.json",
+      "bytes": 2198994,
+      "sha256": "fd7dd72846b012bb3206dbd330436722b98664a26741adb83dc56c271e493bc4",
+      "training_rows": 90000,
+      "input_files": [
+        "data/aka_asr_train.jsonl",
+        "data/pristine_twi_train.jsonl"
+      ],
+      "original_row_counts": {
+        "data/aka_asr_train.jsonl": 8085,
+        "data/pristine_twi_train.jsonl": 45000
+      },
+      "balance_rule": "upsample_each_corpus_to_largest_then_concatenate",
+      "algorithm": "BPE",
+      "normalization": "none",
+      "pre_tokenizer": "Whitespace",
+      "minimum_frequency": 0,
+      "special_tokens": [
+        "[PAD]",
+        "[UNK]",
+        "[CLS]",
+        "[SEP]",
+        "[MASK]",
+        "<s>",
+        "</s>",
+        "<pad>"
+      ]
+    }
+  ],
+  "metrics": {
+    "xlm_roberta_base": {
+      "asr": {
+        "tokenizer_name": "xlm_roberta_base",
+        "tokenizer_reference": "xlm-roberta-base",
+        "source_file": "data/revision_v2/aka_asr_test.jsonl",
+        "num_samples": 1010,
+        "vocab_size": 250002,
+        "fertility": 2.4053843265258963,
+        "fertility_sample_std": 0.2788528862027721,
+        "total_tokens": 83272,
+        "total_words": 34619,
+        "sequence_length": {
+          "mean": 82.44752475247525,
+          "median": 80.0,
+          "p90": 109.10000000000002,
+          "p95": 118.0,
+          "max": 180
+        },
+        "vocabulary_utilization": {
+          "unique_token_ids": 2108,
+          "ratio": 0.008431932544539644,
+          "percent": 0.8431932544539644
+        },
+        "bytes_per_token": 2.240392929195888,
+        "characters_per_token": 2.0748751080795467,
+        "unknown_tokens": {
+          "count": 220,
+          "ratio": 0.0026419444711307523
+        },
+        "special_tokens": {
+          "count": 2240,
+          "ratio": 0.026899798251513115
+        }
+      },
+      "formal": {
+        "tokenizer_name": "xlm_roberta_base",
+        "tokenizer_reference": "xlm-roberta-base",
+        "source_file": "data/pristine_twi_test.jsonl",
+        "num_samples": 2500,
+        "vocab_size": 250002,
+        "fertility": 2.4952271410460134,
+        "fertility_sample_std": 0.11957832315104959,
+        "total_tokens": 1739862,
+        "total_words": 697276,
+        "sequence_length": {
+          "mean": 695.9448,
+          "median": 680.0,
+          "p90": 858.0,
+          "p95": 922.0499999999997,
+          "max": 3997
+        },
+        "vocabulary_utilization": {
+          "unique_token_ids": 8582,
+          "ratio": 0.03432772537819698,
+          "percent": 3.4327725378196976
+        },
+        "bytes_per_token": 2.1836421509292117,
+        "characters_per_token": 1.9554102566755294,
+        "unknown_tokens": {
+          "count": 12803,
+          "ratio": 0.007358629592461931
+        },
+        "special_tokens": {
+          "count": 17803,
+          "ratio": 0.010232420732218993
+        }
+      }
+    },
+    "bert_base_multilingual_cased": {
+      "asr": {
+        "tokenizer_name": "bert_base_multilingual_cased",
+        "tokenizer_reference": "bert-base-multilingual-cased",
+        "source_file": "data/revision_v2/aka_asr_test.jsonl",
+        "num_samples": 1010,
+        "vocab_size": 119547,
+        "fertility": 2.3348739131690692,
+        "fertility_sample_std": 0.25477656199154136,
+        "total_tokens": 80831,
+        "total_words": 34619,
+        "sequence_length": {
+          "mean": 80.03069306930693,
+          "median": 78.0,
+          "p90": 106.0,
+          "p95": 115.0,
+          "max": 182
+        },
+        "vocabulary_utilization": {
+          "unique_token_ids": 1986,
+          "ratio": 0.016612712991543075,
+          "percent": 1.6612712991543075
+        },
+        "bytes_per_token": 2.3080501292820825,
+        "characters_per_token": 2.1375338669569843,
+        "unknown_tokens": {
+          "count": 479,
+          "ratio": 0.005925944254060942
+        },
+        "special_tokens": {
+          "count": 2499,
+          "ratio": 0.030916356348430676
+        }
+      },
+      "formal": {
+        "tokenizer_name": "bert_base_multilingual_cased",
+        "tokenizer_reference": "bert-base-multilingual-cased",
+        "source_file": "data/pristine_twi_test.jsonl",
+        "num_samples": 2500,
+        "vocab_size": 119547,
+        "fertility": 2.35550054784619,
+        "fertility_sample_std": 0.10693789712338661,
+        "total_tokens": 1642434,
+        "total_words": 697276,
+        "sequence_length": {
+          "mean": 656.9736,
+          "median": 642.5,
+          "p90": 809.0,
+          "p95": 869.0,
+          "max": 3727
+        },
+        "vocabulary_utilization": {
+          "unique_token_ids": 7863,
+          "ratio": 0.06577329418555045,
+          "percent": 6.577329418555045
+        },
+        "bytes_per_token": 2.3131742280055088,
+        "characters_per_token": 2.0714037824350933,
+        "unknown_tokens": {
+          "count": 21175,
+          "ratio": 0.012892451081748186
+        },
+        "special_tokens": {
+          "count": 26175,
+          "ratio": 0.01593671343871352
+        }
+      }
+    },
+    "mt5_base": {
+      "asr": {
+        "tokenizer_name": "mt5_base",
+        "tokenizer_reference": "google/mt5-base",
+        "source_file": "data/revision_v2/aka_asr_test.jsonl",
+        "num_samples": 1010,
+        "vocab_size": 250100,
+        "fertility": 2.32248187411537,
+        "fertility_sample_std": 0.26032589149054514,
+        "total_tokens": 80402,
+        "total_words": 34619,
+        "sequence_length": {
+          "mean": 79.6059405940594,
+          "median": 78.0,
+          "p90": 106.0,
+          "p95": 114.0,
+          "max": 180
+        },
+        "vocabulary_utilization": {
+          "unique_token_ids": 2371,
+          "ratio": 0.009480207916833266,
+          "percent": 0.9480207916833266
+        },
+        "bytes_per_token": 2.320365165045646,
+        "characters_per_token": 2.148939081117385,
+        "unknown_tokens": {
+          "count": 0,
+          "ratio": 0.0
+        },
+        "special_tokens": {
+          "count": 1010,
+          "ratio": 0.012561876570234571
+        }
+      },
+      "formal": {
+        "tokenizer_name": "mt5_base",
+        "tokenizer_reference": "google/mt5-base",
+        "source_file": "data/pristine_twi_test.jsonl",
+        "num_samples": 2500,
+        "vocab_size": 250100,
+        "fertility": 2.5108622697468435,
+        "fertility_sample_std": 0.11541993442315686,
+        "total_tokens": 1750764,
+        "total_words": 697276,
+        "sequence_length": {
+          "mean": 700.3056,
+          "median": 684.0,
+          "p90": 865.0,
+          "p95": 932.0,
+          "max": 4013
+        },
+        "vocabulary_utilization": {
+          "unique_token_ids": 9684,
+          "ratio": 0.03872051179528189,
+          "percent": 3.8720511795281887
+        },
+        "bytes_per_token": 2.1700446205199557,
+        "characters_per_token": 1.9432339253034676,
+        "unknown_tokens": {
+          "count": 0,
+          "ratio": 0.0
+        },
+        "special_tokens": {
+          "count": 2500,
+          "ratio": 0.0014279480272612413
+        }
+      }
+    },
+    "v4000": {
+      "asr": {
+        "tokenizer_name": "v4000",
+        "tokenizer_reference": "models/revision_v2/mixed_bpe_v4000.json",
+        "source_file": "data/revision_v2/aka_asr_test.jsonl",
+        "num_samples": 1010,
+        "vocab_size": 4000,
+        "fertility": 1.3847886998469048,
+        "fertility_sample_std": 0.16455589663474834,
+        "total_tokens": 47940,
+        "total_words": 34619,
+        "sequence_length": {
+          "mean": 47.46534653465346,
+          "median": 46.0,
+          "p90": 64.0,
+          "p95": 71.0,
+          "max": 120
+        },
+        "vocabulary_utilization": {
+          "unique_token_ids": 1886,
+          "ratio": 0.4715,
+          "percent": 47.15
+        },
+        "bytes_per_token": 3.891572799332499,
+        "characters_per_token": 3.604067584480601,
+        "unknown_tokens": {
+          "count": 0,
+          "ratio": 0.0
+        },
+        "special_tokens": {
+          "count": 0,
+          "ratio": 0.0
+        }
+      },
+      "formal": {
+        "tokenizer_name": "v4000",
+        "tokenizer_reference": "models/revision_v2/mixed_bpe_v4000.json",
+        "source_file": "data/pristine_twi_test.jsonl",
+        "num_samples": 2500,
+        "vocab_size": 4000,
+        "fertility": 1.322836294379844,
+        "fertility_sample_std": 0.09062250975807937,
+        "total_tokens": 922382,
+        "total_words": 697276,
+        "sequence_length": {
+          "mean": 368.9528,
+          "median": 362.0,
+          "p90": 456.0999999999999,
+          "p95": 491.0499999999997,
+          "max": 1902
+        },
+        "vocabulary_utilization": {
+          "unique_token_ids": 3722,
+          "ratio": 0.9305,
+          "percent": 93.05
+        },
+        "bytes_per_token": 4.118939875236074,
+        "characters_per_token": 3.6884327751408854,
+        "unknown_tokens": {
+          "count": 4,
+          "ratio": 4.33659806891288e-06
+        },
+        "special_tokens": {
+          "count": 4,
+          "ratio": 4.33659806891288e-06
+        }
+      }
+    },
+    "v8000": {
+      "asr": {
+        "tokenizer_name": "v8000",
+        "tokenizer_reference": "models/revision_v2/mixed_bpe_v8000.json",
+        "source_file": "data/revision_v2/aka_asr_test.jsonl",
+        "num_samples": 1010,
+        "vocab_size": 8000,
+        "fertility": 1.2970911926976516,
+        "fertility_sample_std": 0.13192226596559456,
+        "total_tokens": 44904,
+        "total_words": 34619,
+        "sequence_length": {
+          "mean": 44.45940594059406,
+          "median": 43.0,
+          "p90": 60.0,
+          "p95": 66.0,
+          "max": 112
+        },
+        "vocabulary_utilization": {
+          "unique_token_ids": 2719,
+          "ratio": 0.339875,
+          "percent": 33.9875
+        },
+        "bytes_per_token": 4.154685551398539,
+        "characters_per_token": 3.8477418492784605,
+        "unknown_tokens": {
+          "count": 0,
+          "ratio": 0.0
+        },
+        "special_tokens": {
+          "count": 0,
+          "ratio": 0.0
+        }
+      },
+      "formal": {
+        "tokenizer_name": "v8000",
+        "tokenizer_reference": "models/revision_v2/mixed_bpe_v8000.json",
+        "source_file": "data/pristine_twi_test.jsonl",
+        "num_samples": 2500,
+        "vocab_size": 8000,
+        "fertility": 1.268424554982532,
+        "fertility_sample_std": 0.07679899174619619,
+        "total_tokens": 884442,
+        "total_words": 697276,
+        "sequence_length": {
+          "mean": 353.7768,
+          "median": 347.0,
+          "p90": 437.0,
+          "p95": 473.0,
+          "max": 1864
+        },
+        "vocabulary_utilization": {
+          "unique_token_ids": 6901,
+          "ratio": 0.862625,
+          "percent": 86.2625
+        },
+        "bytes_per_token": 4.295630465310332,
+        "characters_per_token": 3.8466558575915664,
+        "unknown_tokens": {
+          "count": 4,
+          "ratio": 4.522625565045531e-06
+        },
+        "special_tokens": {
+          "count": 4,
+          "ratio": 4.522625565045531e-06
+        }
+      }
+    },
+    "v16000": {
+      "asr": {
+        "tokenizer_name": "v16000",
+        "tokenizer_reference": "models/revision_v2/mixed_bpe_v16000.json",
+        "source_file": "data/revision_v2/aka_asr_test.jsonl",
+        "num_samples": 1010,
+        "vocab_size": 16000,
+        "fertility": 1.2406193130939658,
+        "fertility_sample_std": 0.10682605901930739,
+        "total_tokens": 42949,
+        "total_words": 34619,
+        "sequence_length": {
+          "mean": 42.52376237623762,
+          "median": 41.0,
+          "p90": 57.0,
+          "p95": 63.0,
+          "max": 103
+        },
+        "vocabulary_utilization": {
+          "unique_token_ids": 3549,
+          "ratio": 0.2218125,
+          "percent": 22.18125
+        },
+        "bytes_per_token": 4.3438031153228245,
+        "characters_per_token": 4.022887610887332,
+        "unknown_tokens": {
+          "count": 0,
+          "ratio": 0.0
+        },
+        "special_tokens": {
+          "count": 0,
+          "ratio": 0.0
+        }
+      },
+      "formal": {
+        "tokenizer_name": "v16000",
+        "tokenizer_reference": "models/revision_v2/mixed_bpe_v16000.json",
+        "source_file": "data/pristine_twi_test.jsonl",
+        "num_samples": 2500,
+        "vocab_size": 16000,
+        "fertility": 1.2341569192113309,
+        "fertility_sample_std": 0.06698968956525488,
+        "total_tokens": 860548,
+        "total_words": 697276,
+        "sequence_length": {
+          "mean": 344.2192,
+          "median": 337.5,
+          "p90": 426.0,
+          "p95": 461.0,
+          "max": 1840
+        },
+        "vocabulary_utilization": {
+          "unique_token_ids": 11310,
+          "ratio": 0.706875,
+          "percent": 70.6875
+        },
+        "bytes_per_token": 4.414903061769942,
+        "characters_per_token": 3.953462212450671,
+        "unknown_tokens": {
+          "count": 4,
+          "ratio": 4.648200913836299e-06
+        },
+        "special_tokens": {
+          "count": 4,
+          "ratio": 4.648200913836299e-06
+        }
+      }
+    },
+    "v32000": {
+      "asr": {
+        "tokenizer_name": "v32000",
+        "tokenizer_reference": "models/revision_v2/mixed_bpe_v32000.json",
+        "source_file": "data/revision_v2/aka_asr_test.jsonl",
+        "num_samples": 1010,
+        "vocab_size": 32000,
+        "fertility": 1.2070828157947948,
+        "fertility_sample_std": 0.08841236717254061,
+        "total_tokens": 41788,
+        "total_words": 34619,
+        "sequence_length": {
+          "mean": 41.37425742574258,
+          "median": 40.0,
+          "p90": 56.0,
+          "p95": 61.0,
+          "max": 97
+        },
+        "vocabulary_utilization": {
+          "unique_token_ids": 4108,
+          "ratio": 0.128375,
+          "percent": 12.837499999999999
+        },
+        "bytes_per_token": 4.464487412654351,
+        "characters_per_token": 4.134655882071408,
+        "unknown_tokens": {
+          "count": 0,
+          "ratio": 0.0
+        },
+        "special_tokens": {
+          "count": 0,
+          "ratio": 0.0
+        }
+      },
+      "formal": {
+        "tokenizer_name": "v32000",
+        "tokenizer_reference": "models/revision_v2/mixed_bpe_v32000.json",
+        "source_file": "data/pristine_twi_test.jsonl",
+        "num_samples": 2500,
+        "vocab_size": 32000,
+        "fertility": 1.2151974254097373,
+        "fertility_sample_std": 0.06112867586371265,
+        "total_tokens": 847328,
+        "total_words": 697276,
+        "sequence_length": {
+          "mean": 338.9312,
+          "median": 332.0,
+          "p90": 419.0,
+          "p95": 453.0499999999997,
+          "max": 1821
+        },
+        "vocabulary_utilization": {
+          "unique_token_ids": 15240,
+          "ratio": 0.47625,
+          "percent": 47.625
+        },
+        "bytes_per_token": 4.4837843196495335,
+        "characters_per_token": 4.015144076437932,
+        "unknown_tokens": {
+          "count": 4,
+          "ratio": 4.720722081649609e-06
+        },
+        "special_tokens": {
+          "count": 4,
+          "ratio": 4.720722081649609e-06
+        }
+      }
+    }
+  },
+  "percentage_reductions_vs_multilingual_baselines": {
+    "v4000": {
+      "xlm_roberta_base": {
+        "asr": 42.42962820635989,
+        "formal": 46.985335618572044
+      },
+      "bert_base_multilingual_cased": {
+        "asr": 40.691071494847286,
+        "formal": 43.84054397315204
+      },
+      "mt5_base": {
+        "asr": 40.374617546827196,
+        "formal": 47.315457708748866
+      }
+    },
+    "v8000": {
+      "xlm_roberta_base": {
+        "asr": 46.07551157652032,
+        "formal": 49.16596833541971
+      },
+      "bert_base_multilingual_cased": {
+        "asr": 44.447056203684234,
+        "formal": 46.15053024961734
+      },
+      "mt5_base": {
+        "asr": 44.15064301883038,
+        "formal": 49.48251163492053
+      }
+    },
+    "v16000": {
+      "xlm_roberta_base": {
+        "asr": 48.423239504275145,
+        "formal": 50.53929564528682
+      },
+      "bert_base_multilingual_cased": {
+        "asr": 46.865682720738334,
+        "formal": 47.60532234476393
+      },
+      "mt5_base": {
+        "asr": 46.58217457277182,
+        "formal": 50.84728724145573
+      }
+    },
+    "v32000": {
+      "xlm_roberta_base": {
+        "asr": 49.81746565472188,
+        "formal": 51.299126022638575
+      },
+      "bert_base_multilingual_cased": {
+        "asr": 48.3020128416078,
+        "formal": 48.41022531194556
+      },
+      "mt5_base": {
+        "asr": 48.02616850327106,
+        "formal": 51.60238615827147
+      }
+    }
+  },
+  "bootstrap_confidence_intervals": {
+    "v4000": {
+      "xlm_roberta_base": {
+        "asr": {
+          "difference_candidate_minus_baseline": -1.0205956266789915,
+          "confidence_level": 0.95,
+          "lower": -1.0369051136371275,
+          "upper": -1.00407391837446,
+          "resamples": 1000,
+          "seed": 20260730
+        },
+        "formal": {
+          "difference_candidate_minus_baseline": -1.1723908466661694,
+          "confidence_level": 0.95,
+          "lower": -1.1779823213063605,
+          "upper": -1.166790089922814,
+          "resamples": 1000,
+          "seed": 20260730
+        }
+      },
+      "bert_base_multilingual_cased": {
+        "asr": {
+          "difference_candidate_minus_baseline": -0.9500852133221644,
+          "confidence_level": 0.95,
+          "lower": -0.9660025090828178,
+          "upper": -0.9343881588908789,
+          "resamples": 1000,
+          "seed": 20260730
+        },
+        "formal": {
+          "difference_candidate_minus_baseline": -1.032664253466346,
+          "confidence_level": 0.95,
+          "lower": -1.0381810599890466,
+          "upper": -1.0273187467183442,
+          "resamples": 1000,
+          "seed": 20260730
+        }
+      },
+      "mt5_base": {
+        "asr": {
+          "difference_candidate_minus_baseline": -0.9376931742684653,
+          "confidence_level": 0.95,
+          "lower": -0.9536740942030647,
+          "upper": -0.922063801875113,
+          "resamples": 1000,
+          "seed": 20260730
+        },
+        "formal": {
+          "difference_candidate_minus_baseline": -1.1880259753669995,
+          "confidence_level": 0.95,
+          "lower": -1.1937750247506758,
+          "upper": -1.1824647022849004,
+          "resamples": 1000,
+          "seed": 20260730
+        }
+      }
+    },
+    "v8000": {
+      "xlm_roberta_base": {
+        "asr": {
+          "difference_candidate_minus_baseline": -1.1082931338282447,
+          "confidence_level": 0.95,
+          "lower": -1.124016627130983,
+          "upper": -1.0936661766592248,
+          "resamples": 1000,
+          "seed": 20260730
+        },
+        "formal": {
+          "difference_candidate_minus_baseline": -1.2268025860634815,
+          "confidence_level": 0.95,
+          "lower": -1.2318922344234333,
+          "upper": -1.2217300899729462,
+          "resamples": 1000,
+          "seed": 20260730
+        }
+      },
+      "bert_base_multilingual_cased": {
+        "asr": {
+          "difference_candidate_minus_baseline": -1.0377827204714176,
+          "confidence_level": 0.95,
+          "lower": -1.053034194628411,
+          "upper": -1.0234336560065596,
+          "resamples": 1000,
+          "seed": 20260730
+        },
+        "formal": {
+          "difference_candidate_minus_baseline": -1.087075992863658,
+          "confidence_level": 0.95,
+          "lower": -1.0919380283958477,
+          "upper": -1.0821406142306764,
+          "resamples": 1000,
+          "seed": 20260730
+        }
+      },
+      "mt5_base": {
+        "asr": {
+          "difference_candidate_minus_baseline": -1.0253906814177185,
+          "confidence_level": 0.95,
+          "lower": -1.0407369566752716,
+          "upper": -1.0105118182445343,
+          "resamples": 1000,
+          "seed": 20260730
+        },
+        "formal": {
+          "difference_candidate_minus_baseline": -1.2424377147643115,
+          "confidence_level": 0.95,
+          "lower": -1.2473841724212689,
+          "upper": -1.2372852370647638,
+          "resamples": 1000,
+          "seed": 20260730
+        }
+      }
+    },
+    "v16000": {
+      "xlm_roberta_base": {
+        "asr": {
+          "difference_candidate_minus_baseline": -1.1647650134319305,
+          "confidence_level": 0.95,
+          "lower": -1.1803023787087659,
+          "upper": -1.1499985152119885,
+          "resamples": 1000,
+          "seed": 20260730
+        },
+        "formal": {
+          "difference_candidate_minus_baseline": -1.2610702218346825,
+          "confidence_level": 0.95,
+          "lower": -1.266021864500929,
+          "upper": -1.2562038703544574,
+          "resamples": 1000,
+          "seed": 20260730
+        }
+      },
+      "bert_base_multilingual_cased": {
+        "asr": {
+          "difference_candidate_minus_baseline": -1.0942546000751034,
+          "confidence_level": 0.95,
+          "lower": -1.108814131206206,
+          "upper": -1.0806354763359767,
+          "resamples": 1000,
+          "seed": 20260730
+        },
+        "formal": {
+          "difference_candidate_minus_baseline": -1.121343628634859,
+          "confidence_level": 0.95,
+          "lower": -1.1260043710627168,
+          "upper": -1.1166917357637136,
+          "resamples": 1000,
+          "seed": 20260730
+        }
+      },
+      "mt5_base": {
+        "asr": {
+          "difference_candidate_minus_baseline": -1.0818625610214043,
+          "confidence_level": 0.95,
+          "lower": -1.0968309053902434,
+          "upper": -1.0672260936753042,
+          "resamples": 1000,
+          "seed": 20260730
+        },
+        "formal": {
+          "difference_candidate_minus_baseline": -1.2767053505355126,
+          "confidence_level": 0.95,
+          "lower": -1.2813368575755475,
+          "upper": -1.2717795887374466,
+          "resamples": 1000,
+          "seed": 20260730
+        }
+      }
+    },
+    "v32000": {
+      "xlm_roberta_base": {
+        "asr": {
+          "difference_candidate_minus_baseline": -1.1983015107311015,
+          "confidence_level": 0.95,
+          "lower": -1.2139478715681893,
+          "upper": -1.1830500585956858,
+          "resamples": 1000,
+          "seed": 20260730
+        },
+        "formal": {
+          "difference_candidate_minus_baseline": -1.280029715636276,
+          "confidence_level": 0.95,
+          "lower": -1.2847954565218012,
+          "upper": -1.275326161404293,
+          "resamples": 1000,
+          "seed": 20260730
+        }
+      },
+      "bert_base_multilingual_cased": {
+        "asr": {
+          "difference_candidate_minus_baseline": -1.1277910973742744,
+          "confidence_level": 0.95,
+          "lower": -1.1419871303064917,
+          "upper": -1.1145316485431254,
+          "resamples": 1000,
+          "seed": 20260730
+        },
+        "formal": {
+          "difference_candidate_minus_baseline": -1.1403031224364526,
+          "confidence_level": 0.95,
+          "lower": -1.1448015980044466,
+          "upper": -1.135789379263309,
+          "resamples": 1000,
+          "seed": 20260730
+        }
+      },
+      "mt5_base": {
+        "asr": {
+          "difference_candidate_minus_baseline": -1.1153990583205753,
+          "confidence_level": 0.95,
+          "lower": -1.130138613847503,
+          "upper": -1.1007402384014948,
+          "resamples": 1000,
+          "seed": 20260730
+        },
+        "formal": {
+          "difference_candidate_minus_baseline": -1.2956648443371062,
+          "confidence_level": 0.95,
+          "lower": -1.3002691487955842,
+          "upper": -1.2908566133913573,
+          "resamples": 1000,
+          "seed": 20260730
+        }
+      }
+    }
+  },
+  "historical_8k_compatibility": {
+    "historical_path": "models/mixed_tokenizer.json",
+    "historical_sha256": "a3282100667adbb61f31917985274507c41d0f63830246e6a3eb9d0712f9915c",
+    "ablation_path": "models/revision_v2/mixed_bpe_v8000.json",
+    "ablation_sha256": "8224d9a97e68fb97e2a22f64af997e7c4387d007db4f0420ece16898c1dd00b1",
+    "vocabularies_equal": true,
+    "encoding_mismatches": {
+      "asr": 0,
+      "formal": 0
+    },
+    "exact_test_encoding_match": true,
+    "interpretation": "The newly trained 8K tokenizer is behaviorally identical to the historical mixed tokenizer on both frozen test regimes; serialization hashes differ."
+  },
+  "tradeoff_rows": [
+    {
+      "vocab_size": 4000,
+      "actual_vocab_size": 4000,
+      "asr_fertility": 1.3847886998469048,
+      "asr_median": 46.0,
+      "asr_p90": 64.0,
+      "asr_p95": 71.0,
+      "asr_utilization_percent": 47.15,
+      "formal_fertility": 1.322836294379844,
+      "formal_median": 362.0,
+      "formal_p90": 456.0999999999999,
+      "formal_p95": 491.0499999999997,
+      "formal_utilization_percent": 93.05,
+      "tokenizer_size_mib": 0.24426651000976562,
+      "embedding_costs": {
+        "Qwen/Qwen3-0.6B-Base": {
+          "hidden_size": 1024,
+          "input_plus_output_parameters": 8192000,
+          "fp16_mib": 15.625,
+          "fp32_mib": 31.25
+        },
+        "google/gemma-3-1b-pt": {
+          "hidden_size": 1152,
+          "input_plus_output_parameters": 9216000,
+          "fp16_mib": 17.578125,
+          "fp32_mib": 35.15625
+        },
+        "Qwen/Qwen3-1.7B-Base": {
+          "hidden_size": 2048,
+          "input_plus_output_parameters": 16384000,
+          "fp16_mib": 31.25,
+          "fp32_mib": 62.5
+        },
+        "meta-llama/Llama-3.2-1B": {
+          "hidden_size": 2048,
+          "input_plus_output_parameters": 16384000,
+          "fp16_mib": 31.25,
+          "fp32_mib": 62.5
+        },
+        "CohereLabs/tiny-aya-base": {
+          "hidden_size": 2048,
+          "input_plus_output_parameters": 16384000,
+          "fp16_mib": 31.25,
+          "fp32_mib": 62.5
+        }
+      }
+    },
+    {
+      "vocab_size": 8000,
+      "actual_vocab_size": 8000,
+      "asr_fertility": 1.2970911926976516,
+      "asr_median": 43.0,
+      "asr_p90": 60.0,
+      "asr_p95": 66.0,
+      "asr_utilization_percent": 33.9875,
+      "formal_fertility": 1.268424554982532,
+      "formal_median": 347.0,
+      "formal_p90": 437.0,
+      "formal_p95": 473.0,
+      "formal_utilization_percent": 86.2625,
+      "tokenizer_size_mib": 0.5020771026611328,
+      "embedding_costs": {
+        "Qwen/Qwen3-0.6B-Base": {
+          "hidden_size": 1024,
+          "input_plus_output_parameters": 16384000,
+          "fp16_mib": 31.25,
+          "fp32_mib": 62.5
+        },
+        "google/gemma-3-1b-pt": {
+          "hidden_size": 1152,
+          "input_plus_output_parameters": 18432000,
+          "fp16_mib": 35.15625,
+          "fp32_mib": 70.3125
+        },
+        "Qwen/Qwen3-1.7B-Base": {
+          "hidden_size": 2048,
+          "input_plus_output_parameters": 32768000,
+          "fp16_mib": 62.5,
+          "fp32_mib": 125.0
+        },
+        "meta-llama/Llama-3.2-1B": {
+          "hidden_size": 2048,
+          "input_plus_output_parameters": 32768000,
+          "fp16_mib": 62.5,
+          "fp32_mib": 125.0
+        },
+        "CohereLabs/tiny-aya-base": {
+          "hidden_size": 2048,
+          "input_plus_output_parameters": 32768000,
+          "fp16_mib": 62.5,
+          "fp32_mib": 125.0
+        }
+      }
+    },
+    {
+      "vocab_size": 16000,
+      "actual_vocab_size": 16000,
+      "asr_fertility": 1.2406193130939658,
+      "asr_median": 41.0,
+      "asr_p90": 57.0,
+      "asr_p95": 63.0,
+      "asr_utilization_percent": 22.18125,
+      "formal_fertility": 1.2341569192113309,
+      "formal_median": 337.5,
+      "formal_p90": 426.0,
+      "formal_p95": 461.0,
+      "formal_utilization_percent": 70.6875,
+      "tokenizer_size_mib": 1.0283832550048828,
+      "embedding_costs": {
+        "Qwen/Qwen3-0.6B-Base": {
+          "hidden_size": 1024,
+          "input_plus_output_parameters": 32768000,
+          "fp16_mib": 62.5,
+          "fp32_mib": 125.0
+        },
+        "google/gemma-3-1b-pt": {
+          "hidden_size": 1152,
+          "input_plus_output_parameters": 36864000,
+          "fp16_mib": 70.3125,
+          "fp32_mib": 140.625
+        },
+        "Qwen/Qwen3-1.7B-Base": {
+          "hidden_size": 2048,
+          "input_plus_output_parameters": 65536000,
+          "fp16_mib": 125.0,
+          "fp32_mib": 250.0
+        },
+        "meta-llama/Llama-3.2-1B": {
+          "hidden_size": 2048,
+          "input_plus_output_parameters": 65536000,
+          "fp16_mib": 125.0,
+          "fp32_mib": 250.0
+        },
+        "CohereLabs/tiny-aya-base": {
+          "hidden_size": 2048,
+          "input_plus_output_parameters": 65536000,
+          "fp16_mib": 125.0,
+          "fp32_mib": 250.0
+        }
+      }
+    },
+    {
+      "vocab_size": 32000,
+      "actual_vocab_size": 32000,
+      "asr_fertility": 1.2070828157947948,
+      "asr_median": 40.0,
+      "asr_p90": 56.0,
+      "asr_p95": 61.0,
+      "asr_utilization_percent": 12.837499999999999,
+      "formal_fertility": 1.2151974254097373,
+      "formal_median": 332.0,
+      "formal_p90": 419.0,
+      "formal_p95": 453.0499999999997,
+      "formal_utilization_percent": 47.625,
+      "tokenizer_size_mib": 2.0971240997314453,
+      "embedding_costs": {
+        "Qwen/Qwen3-0.6B-Base": {
+          "hidden_size": 1024,
+          "input_plus_output_parameters": 65536000,
+          "fp16_mib": 125.0,
+          "fp32_mib": 250.0
+        },
+        "google/gemma-3-1b-pt": {
+          "hidden_size": 1152,
+          "input_plus_output_parameters": 73728000,
+          "fp16_mib": 140.625,
+          "fp32_mib": 281.25
+        },
+        "Qwen/Qwen3-1.7B-Base": {
+          "hidden_size": 2048,
+          "input_plus_output_parameters": 131072000,
+          "fp16_mib": 250.0,
+          "fp32_mib": 500.0
+        },
+        "meta-llama/Llama-3.2-1B": {
+          "hidden_size": 2048,
+          "input_plus_output_parameters": 131072000,
+          "fp16_mib": 250.0,
+          "fp32_mib": 500.0
+        },
+        "CohereLabs/tiny-aya-base": {
+          "hidden_size": 2048,
+          "input_plus_output_parameters": 131072000,
+          "fp16_mib": 250.0,
+          "fp32_mib": 500.0
+        }
+      }
+    }
+  ],
+  "operating_point": {
+    "rule": "Select the smallest vocabulary whose fertility is within 1% relative of the best observed fertility in both ASR and formal regimes.",
+    "relative_plateau_tolerance": 0.01,
+    "best_asr_fertility": 1.2070828157947948,
+    "best_formal_fertility": 1.2151974254097373,
+    "qualifying_vocab_sizes": [
+      32000
+    ],
+    "selected_vocab_size": 32000,
+    "status": "boundary_selected_no_earlier_plateau",
+    "boundary_caveat": "Only the largest tested vocabulary meets the fixed threshold, so this is a boundary selection rather than evidence that the curve has fully plateaued.",
+    "model_quality_override": "A later controlled model-quality result may override this tokenizer-only choice."
+  },
+  "chart_contract": {
+    "analytical_question": "How does balanced mixed-BPE fertility change with vocabulary size across ASR and formal Twi?",
+    "takeaway": "The fixed plateau rule selects 32,000; the chart shows both domain curves and exact fertility labels.",
+    "family": "ordered comparison",
+    "variant": "two-series line with markers and direct labels",
+    "data_sufficiency": "Four pre-specified controlled operating points; an experimental curve, not a temporal trend.",
+    "palette": {
+      "policy": "hard two-root cap",
+      "asr": "#1f5a94",
+      "formal": "#b27700",
+      "non_color_distinction": "solid/filled versus dashed/open markers"
+    },
+    "surface": "standalone static SVG and PNG for paper and repository export"
+  },
+  "sources": {
+    "hidden_dimensions": {
+      "Qwen/Qwen3-0.6B-Base": "https://huggingface.co/Qwen/Qwen3-0.6B-Base/blob/main/config.json",
+      "Qwen/Qwen3-1.7B-Base": "https://huggingface.co/Qwen/Qwen3-1.7B-Base/blob/main/config.json",
+      "google/gemma-3-1b-pt": "https://huggingface.co/google/gemma-3-1b-pt/blob/main/config.json",
+      "meta-llama/Llama-3.2-1B": "https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/config.json",
+      "CohereLabs/tiny-aya-base": "https://huggingface.co/CohereLabs/tiny-aya-base/blob/main/config.json"
+    }
+  }
+}

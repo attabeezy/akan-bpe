@@ -1,0 +1,279 @@
+{
+  "schema_version": 1,
+  "comparison_id": "asr_split_revision_v1_vs_v2",
+  "inputs": {
+    "fertility_v1": "results/tokenizer_fertility_experiment_001.json",
+    "fertility_v2": "results/tokenizer_fertility_revision_v2.json",
+    "heuristic_router_v1": "results/router_asr_benchmark.json",
+    "heuristic_router_v2": "results/router_asr_revision_v2.json",
+    "ml_router_v1": "results/router_ml_asr_benchmark.json",
+    "ml_router_v2": "results/router_ml_asr_revision_v2.json"
+  },
+  "fertility_changes": {
+    "xlm_roberta_base": {
+      "asr_test": {
+        "v1": 2.4053328716128473,
+        "v2": 2.4053843265258963,
+        "absolute_delta": 5.14549130490316e-05,
+        "relative_delta_percent": 0.0021392013411652895
+      },
+      "tts_test": {
+        "v1": 2.4952271410460134,
+        "v2": 2.4952271410460134,
+        "absolute_delta": 0.0,
+        "relative_delta_percent": 0.0
+      }
+    },
+    "bert_base_multilingual_cased": {
+      "asr_test": {
+        "v1": 2.3348627824430785,
+        "v2": 2.3348739131690692,
+        "absolute_delta": 1.1130725990682322e-05,
+        "relative_delta_percent": 0.0004767186352182851
+      },
+      "tts_test": {
+        "v1": 2.35550054784619,
+        "v2": 2.35550054784619,
+        "absolute_delta": 0.0,
+        "relative_delta_percent": 0.0
+      }
+    },
+    "mt5_base": {
+      "asr_test": {
+        "v1": 2.3222520416702737,
+        "v2": 2.32248187411537,
+        "absolute_delta": 0.00022983244509644507,
+        "relative_delta_percent": 0.00989696385113903
+      },
+      "tts_test": {
+        "v1": 2.5108622697468435,
+        "v2": 2.5108622697468435,
+        "absolute_delta": 0.0,
+        "relative_delta_percent": 0.0
+      }
+    },
+    "asr": {
+      "asr_test": {
+        "v1": 1.2247713040717976,
+        "v2": 1.2248476270256217,
+        "absolute_delta": 7.632295382409282e-05,
+        "relative_delta_percent": 0.006231608592588211
+      },
+      "tts_test": {
+        "v1": 1.537904646079888,
+        "v2": 1.537904646079888,
+        "absolute_delta": 0.0,
+        "relative_delta_percent": 0.0
+      }
+    },
+    "tts": {
+      "asr_test": {
+        "v1": 1.4875479756442445,
+        "v2": 1.4876512897541811,
+        "absolute_delta": 0.00010331410993669188,
+        "relative_delta_percent": 0.00694526237998794
+      },
+      "tts_test": {
+        "v1": 1.2634179291987677,
+        "v2": 1.2634179291987677,
+        "absolute_delta": 0.0,
+        "relative_delta_percent": 0.0
+      }
+    },
+    "mixed": {
+      "asr_test": {
+        "v1": 1.297001702594292,
+        "v2": 1.2970911926976516,
+        "absolute_delta": 8.949010335967955e-05,
+        "relative_delta_percent": 0.006899767608683893
+      },
+      "tts_test": {
+        "v1": 1.268424554982532,
+        "v2": 1.268424554982532,
+        "absolute_delta": 0.0,
+        "relative_delta_percent": 0.0
+      }
+    }
+  },
+  "reduction_changes": {
+    "asr": {
+      "xlm_roberta_base": {
+        "asr_test": {
+          "v1_percent": 49.08100585468855,
+          "v2_percent": 49.07892208665579,
+          "delta_percentage_points": -0.002083768032761668
+        },
+        "tts_test": {
+          "v1_percent": 38.36614628056708,
+          "v2_percent": 38.36614628056708,
+          "delta_percentage_points": 0.0
+        }
+      },
+      "bert_base_multilingual_cased": {
+        "asr_test": {
+          "v1_percent": 47.54418489679891,
+          "v2_percent": 47.54116613675447,
+          "delta_percentage_points": -0.0030187600444406826
+        },
+        "tts_test": {
+          "v1_percent": 34.71007054164733,
+          "v2_percent": 34.71007054164733,
+          "delta_percentage_points": 0.0
+        }
+      },
+      "mt5_base": {
+        "asr_test": {
+          "v1_percent": 47.25932921601033,
+          "v2_percent": 47.261262157657775,
+          "delta_percentage_points": 0.0019329416474462846
+        },
+        "tts_test": {
+          "v1_percent": 38.749940026182855,
+          "v2_percent": 38.749940026182855,
+          "delta_percentage_points": 0.0
+        }
+      }
+    },
+    "tts": {
+      "xlm_roberta_base": {
+        "asr_test": {
+          "v1_percent": 38.156252999328146,
+          "v2_percent": 38.153280814679604,
+          "delta_percentage_points": -0.0029721846485415426
+        },
+        "tts_test": {
+          "v1_percent": 49.36661643279755,
+          "v2_percent": 49.36661643279755,
+          "delta_percentage_points": 0.0
+        }
+      },
+      "bert_base_multilingual_cased": {
+        "asr_test": {
+          "v1_percent": 36.28970461006056,
+          "v2_percent": 36.285583501379435,
+          "delta_percentage_points": -0.004121108681125918
+        },
+        "tts_test": {
+          "v1_percent": 46.363080647380656,
+          "v2_percent": 46.363080647380656,
+          "delta_percentage_points": 0.0
+        }
+      },
+      "mt5_base": {
+        "asr_test": {
+          "v1_percent": 35.94373268052638,
+          "v2_percent": 35.94562324320291,
+          "delta_percentage_points": 0.001890562676528873
+        },
+        "tts_test": {
+          "v1_percent": 49.68191029744729,
+          "v2_percent": 49.68191029744729,
+          "delta_percentage_points": 0.0
+        }
+      }
+    },
+    "mixed": {
+      "xlm_roberta_base": {
+        "asr_test": {
+          "v1_percent": 46.07807851041367,
+          "v2_percent": 46.07551157652032,
+          "delta_percentage_points": -0.0025669338933482777
+        },
+        "tts_test": {
+          "v1_percent": 49.16596833541971,
+          "v2_percent": 49.16596833541971,
+          "delta_percentage_points": 0.0
+        }
+      },
+      "bert_base_multilingual_cased": {
+        "asr_test": {
+          "v1_percent": 44.450624150290444,
+          "v2_percent": 44.447056203684234,
+          "delta_percentage_points": -0.0035679466062106258
+        },
+        "tts_test": {
+          "v1_percent": 46.15053024961734,
+          "v2_percent": 46.15053024961734,
+          "delta_percentage_points": 0.0
+        }
+      },
+      "mt5_base": {
+        "asr_test": {
+          "v1_percent": 44.148969219489764,
+          "v2_percent": 44.15064301883038,
+          "delta_percentage_points": 0.0016737993406152896
+        },
+        "tts_test": {
+          "v1_percent": 49.48251163492053,
+          "v2_percent": 49.48251163492053,
+          "delta_percentage_points": 0.0
+        }
+      }
+    }
+  },
+  "routers": {
+    "heuristic": {
+      "v1": {
+        "samples": 1011,
+        "correct": 811,
+        "errors": 200,
+        "accuracy_percent": 80.21760633036598
+      },
+      "v2": {
+        "samples": 1010,
+        "correct": 810,
+        "errors": 200,
+        "accuracy_percent": 80.19801980198021
+      },
+      "accuracy_delta_percentage_points": -0.019586528385772795
+    },
+    "ml": {
+      "v1": {
+        "samples": 1011,
+        "correct": 1011,
+        "errors": 0,
+        "accuracy_percent": 100.0
+      },
+      "v2": {
+        "samples": 1010,
+        "correct": 1010,
+        "errors": 0,
+        "accuracy_percent": 100.0
+      },
+      "accuracy_delta_percentage_points": 0.0
+    }
+  },
+  "decision": {
+    "thresholds": {
+      "max_fertility_delta": 0.01,
+      "max_reduction_delta_percentage_points": 0.5,
+      "max_router_delta_percentage_points": 0.5,
+      "require_best_tokenizers_unchanged": true,
+      "require_mixed_deployment_conclusion_unchanged": true
+    },
+    "observed": {
+      "max_absolute_fertility_delta": 0.00022983244509644507,
+      "max_absolute_reduction_delta_percentage_points": 0.004121108681125918,
+      "max_absolute_router_delta_percentage_points": 0.019586528385772795
+    },
+    "best_tokenizers": {
+      "v1": {
+        "best_on_asr_test": "asr",
+        "best_on_tts_test": "tts"
+      },
+      "v2": {
+        "best_on_asr_test": "asr",
+        "best_on_tts_test": "tts"
+      },
+      "unchanged": true
+    },
+    "mixed_deployment_viable": {
+      "v1": true,
+      "v2": true,
+      "unchanged": true
+    },
+    "material_change": false,
+    "model_ladder_disposition": "retain_existing_model_ladder"
+  },
+  "router_limitation": "The historical classifier was serialized under scikit-learn 1.8.0 and evaluated under 1.9.0 with an InconsistentVersionWarning."
+}

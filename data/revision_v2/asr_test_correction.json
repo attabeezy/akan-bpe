@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "operation": "remove_normalized_text_match",
+  "reason": "Remove the sole normalized-text overlap with the frozen ASR training split; retain the 1,011-row source as historical v1 evidence.",
+  "source": {
+    "path": "data/aka_asr_test.jsonl",
+    "rows": 1011,
+    "bytes": 275803,
+    "sha256": "4a682f1f8b8ec9c65e8d5f5c7d99aa592c033959401a387516dc3400acdc488b"
+  },
+  "output": {
+    "path": "data/revision_v2/aka_asr_test.jsonl",
+    "rows": 1010,
+    "bytes": 274522,
+    "sha256": "2bce5ef6ac3b9ea73e03af17a9e0ac5a907fb816ebf5ca70972588469c405111"
+  },
+  "removed_rows": [
+    {
+      "source_row_number": 368,
+      "id": "ak_gh_image_0075_u238_1_1679865194560_EhjBkzF_00912",
+      "source": "aka_asr",
+      "normalized_text_sha256": "8eaa78663e83daf1e9eaf897af2468f67580636041af808160d4927a1fc7e2e6",
+      "text": "Mmaa a wɔde kente asiesie wɔn ho gyina badwam resa. Mmaa yi de agudeɛ agugu wɔn kɔn mu, wɔn nsa ne wɔn nan. Wɔn nyinaa hyɛ ahenemma. Ahemfo nso abɔ dwa te wɔn akyi."
+    }
+  ]
+}

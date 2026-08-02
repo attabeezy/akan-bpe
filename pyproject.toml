@@ -7,7 +7,7 @@ name = "akan-bpe"
 version = "0.2.0"
 description = "Eliminating the Tokenization Tax for Akan through specialized BPE tokenizers and ML routing"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.13,<3.14"
 license = {text = "MIT"}
 authors = [
     {name = "Akan-BPE Team"}
@@ -23,33 +23,39 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 
 dependencies = [
     "datasets>=2.18.0",
+    "matplotlib>=3.10.0",
     "transformers>=4.51.0",
     "tokenizers>=0.15.0",
     "scikit-learn>=1.4.0",
     "numpy>=1.26.0",
+    "protobuf>=5.29.0",
+    "PyYAML>=6.0",
     "python-dotenv>=1.0.0",
     "sentencepiece>=0.1.99",
     "tqdm>=4.66.0",
 ]
 
 [project.optional-dependencies]
-dev = [
-    "pytest>=8.0.0",
-    "black>=24.0.0",
-    "ruff>=0.3.0",
-    "mypy>=1.9.0",
-]
 train = [
     "torch>=2.2.0",
     "accelerate>=0.30.0",
     "peft>=0.11.0",
     "bitsandbytes>=0.43.0",
     "sacrebleu>=2.4.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "black>=24.0.0",
+    "ruff>=0.3.0",
+    "mypy>=1.9.0",
 ]
 
 [tool.setuptools.packages.find]

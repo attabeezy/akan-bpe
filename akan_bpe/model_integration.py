@@ -26,6 +26,7 @@ SUPPORTED_COLAB_QLORA_MODEL_IDS = (
     "CohereLabs/tiny-aya-base",
 )
 VALID_EMBEDDING_INIT_MODES = ("random", "mean_subword")
+VALID_TOKENIZER_STRATEGIES = ("replacement", "extension")
 
 # Short, human-readable slug per supported base model. Used to derive run tags
 # (experiment ids, output dirs, result JSON names) so a run needs only --model-id.
@@ -54,13 +55,18 @@ def model_slug(model_id: str) -> str:
     return "".join(ch if ch.isalnum() or ch == "." else "-" for ch in tail).strip("-")
 
 
-def derive_experiment_id(model_id: str, embedding_init_mode: str) -> str:
+def derive_experiment_id(
+    model_id: str,
+    embedding_init_mode: str,
+    tokenizer_strategy: str = "replacement",
+) -> str:
     """Derive the run tag from model + embedding init, e.g. ``run-qwen-0.6b-mixed``.
 
     The ``mean_subword`` arm gets a ``-meansub`` suffix so the two ablation arms
     never collide on output dirs or result JSON paths.
     """
-    tag = f"run-{model_slug(model_id)}-mixed"
+    strategy_tag = "mixed" if tokenizer_strategy == "replacement" else tokenizer_strategy
+    tag = f"run-{model_slug(model_id)}-{strategy_tag}"
     if embedding_init_mode == "mean_subword":
         tag += "-meansub"
     return tag
@@ -106,6 +112,11 @@ class ModelIntegrationConfig:
     grad_accum: int = 1
     epochs: float = 1.0
     learning_rate: float = 2e-4
+    optimizer: str = "adamw_torch"
+    lr_scheduler_type: str = "linear"
+    warmup_ratio: float = 0.0
+    weight_decay: float = 0.0
+    max_grad_norm: float = 1.0
     peft: PeftConfigSpec = field(default_factory=PeftConfigSpec)
     seed: int = 42
     generation_samples: int = 3
@@ -124,6 +135,9 @@ class ModelIntegrationConfig:
     # on the same eval bytes for an honest cross-tokenizer comparison. Disable to
     # save a second model load when GPU memory is tight.
     compute_base_bpb: bool = True
+    # Replacement discards the base lexical interface. Extension appends novel
+    # Akan rows and requires every original token ID to remain stable.
+    tokenizer_strategy: str = "replacement"
 
 
 def _set_model_token_config(model: Any, tokenizer: PreTrainedTokenizerBase) -> None:
@@ -161,13 +175,23 @@ def load_texts(path: Path, max_samples: int | None = None) -> list[str]:
 
 def load_experiment_tokenizer(tokenizer_path: Path) -> PreTrainedTokenizerFast:
     """Load the local fast tokenizer used for model integration."""
-    tokenizer = PreTrainedTokenizerFast(
-        tokenizer_file=str(tokenizer_path),
-        bos_token="<s>",
-        eos_token="</s>",
-        pad_token="<pad>",
-        unk_token="[UNK]",
-    )
+    if tokenizer_path.is_dir():
+        loaded = AutoTokenizer.from_pretrained(
+            tokenizer_path,
+            local_files_only=True,
+            use_fast=True,
+        )
+        if not loaded.is_fast:
+            raise ValueError("Model integration requires a fast tokenizer artifact.")
+        tokenizer = cast(PreTrainedTokenizerFast, loaded)
+    else:
+        tokenizer = PreTrainedTokenizerFast(
+            tokenizer_file=str(tokenizer_path),
+            bos_token="<s>",
+            eos_token="</s>",
+            pad_token="<pad>",
+            unk_token="[UNK]",
+        )
     # Ensure pad_token is set even if not in the JSON, defaulting to a common fallback if needed.
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token or "[PAD]"
@@ -504,6 +528,7 @@ def _init_embeddings_mean_of_subword(
     base_input_embeddings: Any,
     base_output_embeddings: Any | None,
     torch: Any,
+    start_token_id: int = 0,
 ) -> int:
     """Initialize the resized embedding rows from base subword embeddings.
 
@@ -524,7 +549,7 @@ def _init_embeddings_mean_of_subword(
     rows_initialized = 0
     with torch.no_grad():
         for token_id in tqdm(
-            range(len(experiment_tokenizer)),
+            range(start_token_id, len(experiment_tokenizer)),
             desc="Initializing mean-subword embeddings",
             unit="token",
         ):
@@ -576,14 +601,44 @@ def resize_and_init_embeddings(
         output_embeddings.weight.detach().clone() if output_embeddings is not None else None
     )
 
+    base_tokenizer = None
+    first_new_token_id = 0
+    if config.tokenizer_strategy == "extension":
+        base_tokenizer = AutoTokenizer.from_pretrained(runtime_model_id)
+        base_vocab = base_tokenizer.get_vocab()
+        extension_vocab = tokenizer.get_vocab()
+        changed = [
+            token
+            for token, token_id in base_vocab.items()
+            if extension_vocab.get(token) != token_id
+        ]
+        if changed:
+            preview = ", ".join(repr(token) for token in changed[:5])
+            raise ValueError(
+                f"Extension tokenizer changed {len(changed)} base token IDs: {preview}"
+            )
+        first_new_token_id = len(base_tokenizer)
+        if len(tokenizer) <= first_new_token_id:
+            raise ValueError("Extension tokenizer must append at least one new token.")
+
     # Resize BEFORE prepare_model_for_kbit_training and get_peft_model.
     # pad_to_multiple_of=64 aligns the vocab size to a hardware-friendly boundary.
     model.resize_token_embeddings(len(tokenizer), pad_to_multiple_of=64)
 
     if config.embedding_init_mode == "random":
-        return {"mode": "random", "rows_initialized": 0}
+        record: dict[str, object] = {"mode": "random", "rows_initialized": 0}
+        if config.tokenizer_strategy == "extension":
+            record.update(
+                {
+                    "strategy": "extension",
+                    "first_new_token_id": first_new_token_id,
+                    "original_rows_preserved": first_new_token_id,
+                }
+            )
+        return record
 
-    base_tokenizer = AutoTokenizer.from_pretrained(runtime_model_id)
+    if base_tokenizer is None:
+        base_tokenizer = AutoTokenizer.from_pretrained(runtime_model_id)
     rows = _init_embeddings_mean_of_subword(
         model=model,
         experiment_tokenizer=tokenizer,
@@ -591,8 +646,15 @@ def resize_and_init_embeddings(
         base_input_embeddings=base_input_embeddings,
         base_output_embeddings=base_output_embeddings,
         torch=torch,
+        start_token_id=first_new_token_id,
     )
-    return {"mode": "mean_subword", "rows_initialized": rows}
+    return {
+        "mode": "mean_subword",
+        "rows_initialized": rows,
+        "strategy": config.tokenizer_strategy,
+        "first_new_token_id": first_new_token_id,
+        "original_rows_preserved": first_new_token_id if first_new_token_id else 0,
+    }
 
 
 def select_generation_prompts(texts: list[str], limit: int) -> list[str]:
@@ -802,6 +864,7 @@ def build_result_payload(
         "model_id": config.model_id,
         "runtime_model_id": runtime_model_id,
         "tokenizer_path": config.tokenizer_path,
+        "tokenizer_strategy": config.tokenizer_strategy,
         "train_file": config.train_file,
         "eval_file": config.eval_file,
         "train_samples": len(train_texts),
@@ -810,7 +873,13 @@ def build_result_payload(
         "batch_size": config.batch_size,
         "grad_accum": config.grad_accum,
         "epochs": config.epochs,
+        "seed": config.seed,
         "learning_rate": config.learning_rate,
+        "optimizer": config.optimizer,
+        "lr_scheduler_type": config.lr_scheduler_type,
+        "warmup_ratio": config.warmup_ratio,
+        "weight_decay": config.weight_decay,
+        "max_grad_norm": config.max_grad_norm,
         "peft": asdict(config.peft),
         "device_mode": config.device_mode,
         "embedding_init_mode": config.embedding_init_mode,
@@ -969,6 +1038,11 @@ def _build_model_and_training_args(
         gradient_accumulation_steps=config.grad_accum,
         num_train_epochs=config.epochs,
         learning_rate=config.learning_rate,
+        optim=config.optimizer,
+        lr_scheduler_type=config.lr_scheduler_type,
+        warmup_ratio=config.warmup_ratio,
+        weight_decay=config.weight_decay,
+        max_grad_norm=config.max_grad_norm,
         eval_strategy="epoch",
         save_strategy="epoch",
         load_best_model_at_end=True,
@@ -978,6 +1052,8 @@ def _build_model_and_training_args(
         report_to=[],
         remove_unused_columns=False,
         seed=config.seed,
+        data_seed=config.seed,
+        dataloader_num_workers=0,
         fp16=fp16,
     )
 
@@ -1149,6 +1225,12 @@ def run_model_integration(config: ModelIntegrationConfig) -> dict[str, object]:
             f"Unknown embedding_init_mode={config.embedding_init_mode!r}; "
             f"supported values: {supported}."
         )
+    if config.tokenizer_strategy not in VALID_TOKENIZER_STRATEGIES:
+        supported = ", ".join(VALID_TOKENIZER_STRATEGIES)
+        raise ValueError(
+            f"Unknown tokenizer_strategy={config.tokenizer_strategy!r}; "
+            f"supported values: {supported}."
+        )
     runtime_stack = _import_runtime_stack()
     torch = runtime_stack["torch"]
     auto_model_for_causal_lm = runtime_stack["AutoModelForCausalLM"]
@@ -1220,7 +1302,7 @@ def run_model_integration(config: ModelIntegrationConfig) -> dict[str, object]:
         processing_class=tokenizer,  # replaces deprecated tokenizer= (transformers 4.46+)
         data_collator=default_data_collator,
     )
-    trainer.train()
+    train_output = trainer.train()
     metrics = trainer.evaluate()
     eval_loss = float(metrics["eval_loss"])
     perplexity = float(torch.exp(torch.tensor(eval_loss)).item())
@@ -1251,7 +1333,6 @@ def run_model_integration(config: ModelIntegrationConfig) -> dict[str, object]:
             model=model,
             tokenizer=tokenizer,
         )
-
     output_dir = Path(config.output_dir)
     trainer.save_model(str(output_dir))
     tokenizer.save_pretrained(str(output_dir))
@@ -1260,6 +1341,13 @@ def run_model_integration(config: ModelIntegrationConfig) -> dict[str, object]:
         config=config,
         runtime_model_id=runtime_model_id,
         prompt=reload_prompt,
+    )
+    train_metrics = dict(getattr(train_output, "metrics", {}) or {})
+    checkpoint_bytes = sum(
+        path.stat().st_size for path in output_dir.rglob("*") if path.is_file()
+    )
+    non_padding_tokens_per_epoch = sum(
+        sum(int(mask) for mask in row["attention_mask"]) for row in train_dataset
     )
 
     return build_result_payload(
@@ -1271,6 +1359,7 @@ def run_model_integration(config: ModelIntegrationConfig) -> dict[str, object]:
         eval_metrics={
             "eval_loss": eval_loss,
             "perplexity": perplexity,
+            "trainer_metrics": metrics,
             "bpb": bpb,
             **({"generation_quality": generation_quality} if generation_quality else {}),
         },
@@ -1283,5 +1372,11 @@ def run_model_integration(config: ModelIntegrationConfig) -> dict[str, object]:
         training={
             "completed": True,
             "device_mode": config.device_mode,
+            "trainer_metrics": train_metrics,
+            "non_padding_tokens_per_epoch": non_padding_tokens_per_epoch,
+            "estimated_processed_non_padding_tokens": int(
+                round(non_padding_tokens_per_epoch * config.epochs)
+            ),
+            "checkpoint_bytes": checkpoint_bytes,
         },
     )

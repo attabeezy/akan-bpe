@@ -1,0 +1,214 @@
+{
+  "experiment_id": "router-audit-revision-v2",
+  "status": "complete_demoted_to_secondary_analysis",
+  "decision": {
+    "paper_role": "secondary_analysis",
+    "central_contribution": false,
+    "reason": "Evaluation predicts source-corpus identity on separately collected ASR and formal text. Without an ambiguous or mixed-domain challenge set, near-perfect accuracy does not establish robust routing under realistic domain ambiguity."
+  },
+  "protocol": {
+    "task": "binary source-domain classification",
+    "labels": {
+      "0": "asr",
+      "1": "tts"
+    },
+    "training_sources": {
+      "asr": "data/aka_asr_train.jsonl",
+      "tts": "data/pristine_twi_train.jsonl"
+    },
+    "split": {
+      "method": "stratified_random_holdout",
+      "test_fraction": 0.2,
+      "random_state": 42,
+      "total": 53085,
+      "train": 42468,
+      "test": 10617,
+      "class_totals": {
+        "asr": 8085,
+        "tts": 45000
+      },
+      "test_class_totals": {
+        "asr": 1617,
+        "tts": 9000
+      }
+    },
+    "vectorizer": {
+      "type": "TfidfVectorizer",
+      "parameters": {
+        "analyzer": "word",
+        "binary": false,
+        "decode_error": "strict",
+        "encoding": "utf-8",
+        "input": "content",
+        "lowercase": true,
+        "max_df": 1.0,
+        "max_features": 5000,
+        "min_df": 2,
+        "ngram_range": [
+          1,
+          2
+        ],
+        "norm": "l2",
+        "preprocessor": null,
+        "smooth_idf": true,
+        "stop_words": null,
+        "strip_accents": null,
+        "sublinear_tf": false,
+        "token_pattern": "(?u)\\b\\w\\w+\\b",
+        "tokenizer": null,
+        "use_idf": true,
+        "vocabulary": null
+      }
+    },
+    "classifier": {
+      "type": "LogisticRegression",
+      "parameters": {
+        "C": 1.0,
+        "class_weight": null,
+        "dual": false,
+        "fit_intercept": true,
+        "intercept_scaling": 1,
+        "l1_ratio": 0.0,
+        "max_iter": 1000,
+        "n_jobs": null,
+        "penalty": "deprecated",
+        "random_state": 42,
+        "solver": "lbfgs",
+        "tol": 0.0001,
+        "verbose": 0,
+        "warm_start": false
+      }
+    }
+  },
+  "heldout_source_classification": {
+    "accuracy": 0.9999058114344919,
+    "per_class": {
+      "asr": {
+        "precision": 0.9993819530284301,
+        "recall": 1.0,
+        "f1": 0.9996908809891808,
+        "support": 1617
+      },
+      "tts": {
+        "precision": 1.0,
+        "recall": 0.9998888888888889,
+        "f1": 0.9999444413578532,
+        "support": 9000
+      }
+    },
+    "macro_average": {
+      "precision": 0.999690976514215,
+      "recall": 0.9999444444444445,
+      "f1": 0.999817661173517
+    },
+    "confusion_matrix": {
+      "label_order": [
+        "asr",
+        "tts"
+      ],
+      "rows_true_columns_predicted": [
+        [
+          1617,
+          0
+        ],
+        [
+          1,
+          8999
+        ]
+      ]
+    }
+  },
+  "external_corpus_classification": {
+    "test_files": {
+      "asr": "data/revision_v2/aka_asr_test.jsonl",
+      "tts": "data/pristine_twi_test.jsonl"
+    },
+    "ml": {
+      "accuracy": 0.9994301994301994,
+      "per_class": {
+        "asr": {
+          "precision": 0.9980237154150198,
+          "recall": 1.0,
+          "f1": 0.9990108803165183,
+          "support": 1010
+        },
+        "tts": {
+          "precision": 1.0,
+          "recall": 0.9992,
+          "f1": 0.9995998399359743,
+          "support": 2500
+        }
+      },
+      "macro_average": {
+        "precision": 0.9990118577075099,
+        "recall": 0.9996,
+        "f1": 0.9993053601262463
+      },
+      "confusion_matrix": {
+        "label_order": [
+          "asr",
+          "tts"
+        ],
+        "rows_true_columns_predicted": [
+          [
+            1010,
+            0
+          ],
+          [
+            2,
+            2498
+          ]
+        ]
+      }
+    },
+    "heuristic": {
+      "accuracy": 0.7831908831908831,
+      "per_class": {
+        "asr": {
+          "precision": 0.5908096280087527,
+          "recall": 0.801980198019802,
+          "f1": 0.6803863922721546,
+          "support": 1010
+        },
+        "tts": {
+          "precision": 0.9064983637213652,
+          "recall": 0.7756,
+          "f1": 0.8359560250053891,
+          "support": 2500
+        }
+      },
+      "macro_average": {
+        "precision": 0.7486539958650589,
+        "recall": 0.788790099009901,
+        "f1": 0.7581712086387719
+      },
+      "confusion_matrix": {
+        "label_order": [
+          "asr",
+          "tts"
+        ],
+        "rows_true_columns_predicted": [
+          [
+            810,
+            200
+          ],
+          [
+            561,
+            1939
+          ]
+        ]
+      }
+    }
+  },
+  "limitations": {
+    "ambiguous_challenge_set_available": false,
+    "mixed_domain_ground_truth_evaluated": false,
+    "routing_latency_measured": false,
+    "tokenizer_switching_overhead_measured": false,
+    "model_checkpoint_compatibility": "Separate replacement tokenizers require separate compatible embedding interfaces; the router is not a drop-in tokenizer switch for one frozen checkpoint.",
+    "pickle_runtime": {
+      "runtime_sklearn_version": "1.9.0",
+      "inconsistent_version_warning_observed": true
+    }
+  }
+}

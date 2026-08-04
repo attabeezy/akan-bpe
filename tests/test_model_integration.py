@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from akan_bpe.datasets import TextSample
 from akan_bpe.model_integration import (
     DEFAULT_SMOKE_MODEL_ID,
     ModelIntegrationConfig,
@@ -19,7 +20,6 @@ from akan_bpe.model_integration import (
     run_model_integration,
     validate_colab_qlora_config,
 )
-from akan_bpe.datasets import TextSample
 from akan_bpe.tokenizers import train_bpe_tokenizer
 
 
@@ -679,6 +679,23 @@ def test_init_embeddings_mean_of_subword_averages_base_rows() -> None:
     assert torch.allclose(model.get_input_embeddings().weight[0], torch.tensor([2.0, 2.0]))
     assert torch.allclose(model.get_input_embeddings().weight[1], torch.tensor([3.0, 3.0]))
 
+    extension_model = FakeEmbModel(vocab=2, dim=2)
+    original_row = extension_model.get_input_embeddings().weight[0].detach().clone()
+    extension_rows = _init_embeddings_mean_of_subword(
+        model=extension_model,
+        experiment_tokenizer=exp_tokenizer,
+        base_tokenizer=base_tokenizer,
+        base_input_embeddings=base_embeddings,
+        base_output_embeddings=base_embeddings,
+        torch=torch,
+        start_token_id=1,
+    )
+    assert extension_rows == 1
+    assert torch.allclose(extension_model.get_input_embeddings().weight[0], original_row)
+    assert torch.allclose(
+        extension_model.get_input_embeddings().weight[1], torch.tensor([3.0, 3.0])
+    )
+
 
 def test_resize_and_init_embeddings_random_is_noop(monkeypatch) -> None:
     import torch
@@ -763,6 +780,7 @@ def test_build_result_payload_carries_bpb_and_embedding_init() -> None:
     )
 
     assert payload["embedding_init_mode"] == "mean_subword"
+    assert payload["seed"] == 42
     assert payload["embedding_init"]["rows_initialized"] == 8000
     assert payload["eval"]["bpb"]["experiment"]["bits_per_byte"] == 1.2
 
@@ -869,6 +887,10 @@ def test_derive_experiment_id_uses_model_slug() -> None:
     assert (
         derive_experiment_id("meta-llama/Llama-3.2-1B", "mean_subword")
         == "run-llama-1b-mixed-meansub"
+    )
+    assert (
+        derive_experiment_id("Qwen/Qwen3-0.6B-Base", "mean_subword", "extension")
+        == "run-qwen-0.6b-extension-meansub"
     )
 
 

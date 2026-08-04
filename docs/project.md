@@ -140,16 +140,30 @@ historical mixed tokenizer.
 **Question:** Is full vocabulary replacement better than adding Akan-specific tokens while
 preserving the base tokenizer and its multilingual knowledge?
 
-- [ ] Implement an **extension** strategy that adds Akan-specific tokens to the original model
+**Implementation status (August 2, 2026):** The CPU-side extension contract and intrinsic
+comparison are complete. The locked 32K mixed vocabulary contributes 26,156 novel tokens after
+excluding eight shared special tokens and 5,836 exact Qwen collisions. All 151,669 original token
+IDs remain stable after save/reload. The extension reduces fertility by 23.1% on ASR and 25.4% on
+formal Twi versus the original Qwen tokenizer, while full replacement reduces it by 49.6% and
+52.0%. The controlled model-quality run remains pending; fertility alone does not choose the
+winner.
+
+**Execution readiness (August 2, 2026):** The remaining controlled runs are frozen in the single
+`config/revision_gpu_matrix.yaml` contract. The matrix runner expands stable IDs, executes exactly
+one isolated run at a time, resumes from validated per-run JSON artifacts, and records its YAML
+SHA-256 in every result. The aggregator refuses incomplete, stale, or configuration-mismatched
+matrices. No GPU results are claimed until those artifacts exist.
+
+- [x] Implement an **extension** strategy that adds Akan-specific tokens to the original model
   tokenizer without deleting its existing vocabulary.
-- [ ] Define extension budgets that make the comparison interpretable:
+- [x] Define extension budgets that make the comparison interpretable:
   - Primary comparison: add a fixed number of Akan tokens selected from the final mixed tokenizer.
   - Resource-matched comparison: report the resulting embedding parameter/memory increase.
   - If compute permits, include more than one extension budget to show the curve.
-- [ ] Exclude tokens already represented identically in the base vocabulary.
-- [ ] Specify token-selection rules, normalization compatibility, collision handling, special-token
+- [x] Exclude tokens already represented identically in the base vocabulary.
+- [x] Specify token-selection rules, normalization compatibility, collision handling, special-token
   handling, embedding resizing, tied output-head behavior, and serialization/reload behavior.
-- [ ] Initialize new rows with mean-of-subword embeddings from the original tokenizer; optionally
+- [x] Initialize new rows with mean-of-subword embeddings from the original tokenizer; optionally
   retain random initialization as a diagnostic arm.
 - [ ] Compare on one controlled anchor model first (`Qwen/Qwen3-0.6B`), using the same corpus,
   training steps, QLoRA recipe, seed set, and evaluation examples as full replacement.
@@ -160,10 +174,20 @@ preserving the base tokenizer and its multilingual knowledge?
   - Downstream-task performance.
   - Trainable/total parameters, embedding memory, throughput or processed tokens, and checkpoint
     size where available.
-- [ ] Add round-trip save/reload tests and tests confirming original token IDs remain stable.
-- [ ] Discuss the central trade-off: extension preserves multilingual vocabulary/knowledge but
+- [x] Add round-trip save/reload tests and tests confirming original token IDs remain stable.
+- [x] Discuss the central trade-off: extension preserves multilingual vocabulary/knowledge but
   increases embeddings; replacement maximizes Akan efficiency but discards the original lexical
   interface.
+
+**Frozen primary budget and resource trade-off:** Traverse the complete locked 32K candidate
+vocabulary in learned-ID order, exclude specials and exact base collisions, and append all 26,156
+remaining surfaces without normalization. Qwen's base tokenizer has 151,669 IDs and its model
+preallocates 151,936 embedding rows. After hardware padding the extension uses 177,856 rows,
+adding 25,920 actual model rows: 53.08M untied input/output parameters or 101.25 MiB in FP16. Its
+total lexical interface is 694.75 MiB FP16 versus 125.00 MiB for 32K replacement. Thus extension
+preserves the multilingual interface and cuts tokenization cost substantially, but replacement is
+far more intrinsically efficient and much smaller. BPB, chrF/chrF++, downstream quality,
+throughput, and checkpoint size must decide whether preservation is worth that cost.
 
 **Acceptance criteria**
 
@@ -174,6 +198,11 @@ preserving the base tokenizer and its multilingual knowledge?
 ### R6. P0 - Multi-seed validation
 
 **Question:** Are the initialization gains reliable or artifacts of a single run?
+
+**Execution status:** Code and the 15-run contract are complete; GPU execution is pending. The
+matrix contains 12 replacement runs (two model sizes × two initialization modes × three seeds)
+plus three Qwen 0.6B extension/mean-subword runs. The Qwen 0.6B replacement/mean-subword arm is
+shared between R5 and R6, avoiding duplicate jobs. Seeds are frozen at 17, 42, and 73.
 
 - [ ] Use **three training seeds** for the controlled Qwen scale endpoints:
   `Qwen/Qwen3-0.6B` and `Qwen/Qwen3-1.7B`.
@@ -200,27 +229,55 @@ preserving the base tokenizer and its multilingual knowledge?
 | Qwen3-1.7B | Full replacement | Mean-subword | 3 |
 | Qwen3-0.6B | Vocabulary extension | Mean-subword | 3 if used for the main claim |
 
+**Execution commands**
+
+```bash
+python scripts/run_revision_gpu_matrix.py validate
+python scripts/run_revision_gpu_matrix.py status
+python scripts/run_revision_gpu_matrix.py run --next
+python scripts/aggregate_revision_gpu_matrix.py
+```
+
+Invoke `run --next` once per fresh GPU process until `status` reports all 15 runs complete. Each
+run records the seed, corrected BPB, chrF/chrF++, Trainer throughput, processed non-padding tokens,
+checkpoint bytes, and reload verification. Aggregation reports every seed, arm means/sample
+standard deviations, and 95% paired t intervals for mean-subword-minus-random at both sizes and
+extension-minus-replacement at 0.6B. The downstream task remains the separate P1 gate in R9.
+
 ### R7. P0 - Router: document it or demote it
 
-**Decision:** Demote routing from a central contribution to a secondary analysis unless a genuinely
-ambiguous test set can be built and evaluated.
+**Decision (August 2, 2026):** Routing is demoted from a central contribution to a secondary
+analysis. The frozen audit in `results/router_audit_revision_v2.json` reconstructs the exact
+stratified split, estimator settings, per-class metrics, and confusion matrices. It also records
+the decisive scope limitation: the task predicts source-corpus identity for separately collected
+ASR and formal-text datasets, not ambiguous real-world domain membership. No mixed-domain or
+code-switched challenge set exists, and latency/tokenizer-switching overhead has not been measured.
 
-- [ ] Document the existing router completely:
+- [x] Document the existing router completely:
   - TF-IDF representation and parameters.
   - Classifier type and parameters.
   - Train/validation/test construction and class balance.
   - Heuristic baseline.
-  - Accuracy, precision, recall, F1, confusion matrix, and routing overhead.
-- [ ] Explicitly acknowledge that the current corpora are nearly trivially separable and that this
+  - Accuracy, precision, recall, F1, and confusion matrix; explicitly mark routing overhead as
+    unmeasured rather than implying a deployment result.
+- [x] Explicitly acknowledge that the current corpora are nearly trivially separable and that this
   does not establish robust real-world routing.
-- [ ] Move the near-perfect in-domain result to an appendix or short implementation note.
-- [ ] Remove language implying that current routing performance generalizes to ambiguous or
+- [x] Move the near-perfect in-domain result to a short secondary implementation note.
+- [x] Remove language implying that current routing performance generalizes to ambiguous or
   code-switched inputs.
 - [ ] If routing remains a contribution, build a challenge set containing short utterances,
   punctuation-poor text, code-switching, mixed registers, and out-of-domain Akan; document its
   construction and evaluate error impact on fertility/model behavior.
-- [ ] Otherwise, use the balanced mixed tokenizer as the primary deployment path and defer robust
+- [x] Otherwise, use the balanced mixed tokenizer as the primary deployment path and defer robust
   routing to future work.
+
+**Audit result:** The historical 80/20 holdout contains 1,617 ASR and 9,000 formal-text examples;
+the classifier makes one error (99.9906% accuracy; confusion matrix `[[1617, 0], [1, 8999]]`). On
+the active external tests it makes two errors across 3,510 examples (99.9430%), while the heuristic
+reaches 78.3191%. These values show that the implementation can identify these source corpora, but
+they are not evidence of robust routing under ambiguous, mixed-register, or code-switched input.
+The serialized scikit-learn 1.8.0 model also emits an inconsistent-version warning under the frozen
+1.9.0 audit environment. The balanced mixed tokenizer is therefore the primary deployment path.
 
 ### R8. P1 - Clarify metrics and reproducibility details
 
@@ -606,7 +663,7 @@ The active scope is tokenizer + routing experiments.
 - Token fertility benchmarking (~47% ASR reduction, ~46% TTS reduction vs best baseline)
 - Balanced mixed tokenizer (corpus upsampling — now genuinely differentiates domains)
 - Heuristic router implementation
-- ML classifier router (99.99% train/test accuracy on stratified held-out split)
+- ML source-corpus classifier (99.99% held-out accuracy; secondary analysis only)
 
 **In progress / next phases (per the §0 paper plan):**
 - Methodology hardening (M2) — bits-per-byte eval, embedding-init ablation, and ASR test split fix are complete.
@@ -913,11 +970,13 @@ If phase 1 shows strong specialization effects, Akan-BPE can expand in carefully
 ### 14.1 Router / mux experiment (COMPLETED)
 
 - Implemented heuristic-based router (77.6% on TTS test, 80.2% on ASR test)
-- Trained ML classifier (TF-IDF + Logistic Regression, 99.99% train/test accuracy on stratified 80/20 split of 53,085 samples)
+- Trained ML source-corpus classifier (TF-IDF + Logistic Regression, 99.99% held-out accuracy
+  on a stratified 80/20 split of 53,085 samples)
 - Per-class F1: ASR 0.9997, TTS 0.9999
-- Benchmark showed ML router achieves optimal fertility (matches always-best-tokenizer strategy)
+- On the formal-text source corpus, the ML route matches the always-TTS fertility strategy
 
-**Status:** Complete - ML router significantly outperforms heuristic; accuracy confirmed on held-out test set
+**Status:** Implementation complete; demoted to secondary analysis because this source-corpus task
+does not test ambiguous, mixed-register, or code-switched routing. See R7.
 
 ### 14.2 Incremental tokenizer variants
 
@@ -980,7 +1039,7 @@ This should only happen after the tokenizer question is clearly answered.
 3. ✅ fertility benchmark vs multilingual baselines (XLM-R, mBERT, mT5) — not GPT-2
 4. ✅ unified experiment JSON with fertility comparison
 5. ✅ technical report (report.md) documenting findings
-6. ✅ ML classifier router (99.99% train/test accuracy, stratified held-out eval)
+6. ✅ ML source-corpus classifier (99.99% held-out accuracy; secondary analysis per R7)
 7. ✅ End-to-end notebook (notebooks/train_eval.ipynb)
 
 **Conclusion:** Specialization is real — the v2 checkpoint preserves the ~47% ASR and ~46%

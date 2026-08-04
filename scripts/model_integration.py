@@ -41,7 +41,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--tokenizer-path",
         default=DEFAULT_TOKENIZER_PATH,
-        help=f"Local tokenizer JSON path. Defaults to {DEFAULT_TOKENIZER_PATH}.",
+        help=(
+            "Local tokenizer JSON or saved-tokenizer directory. "
+            f"Defaults to {DEFAULT_TOKENIZER_PATH}."
+        ),
+    )
+    parser.add_argument(
+        "--tokenizer-strategy",
+        choices=("replacement", "extension"),
+        default="replacement",
+        help="Lexical-interface strategy: full replacement or append-only extension.",
     )
     parser.add_argument(
         "--train-file",
@@ -82,6 +91,11 @@ def parse_args() -> argparse.Namespace:
         default=2e-4,
         help="Optimizer learning rate.",
     )
+    parser.add_argument("--optimizer", default="adamw_torch")
+    parser.add_argument("--lr-scheduler-type", default="linear")
+    parser.add_argument("--warmup-ratio", type=float, default=0.0)
+    parser.add_argument("--weight-decay", type=float, default=0.0)
+    parser.add_argument("--max-grad-norm", type=float, default=1.0)
     parser.add_argument("--lora-r", type=int, default=16, help="LoRA rank.")
     parser.add_argument("--lora-alpha", type=int, default=32, help="LoRA alpha.")
     parser.add_argument("--lora-dropout", type=float, default=0.05, help="LoRA dropout.")
@@ -165,7 +179,11 @@ def main() -> None:
         else:
             raise SystemExit("--model-id is required for --device-mode colab-qlora.")
 
-    experiment_id = args.experiment_id or derive_experiment_id(model_id, args.embedding_init_mode)
+    experiment_id = args.experiment_id or derive_experiment_id(
+        model_id,
+        args.embedding_init_mode,
+        args.tokenizer_strategy,
+    )
     output_dir = args.output_dir or str(Path("models") / experiment_id)
     results_output = args.results_output or str(Path("results") / f"{experiment_id}.json")
 
@@ -193,6 +211,11 @@ def main() -> None:
         grad_accum=args.grad_accum,
         epochs=args.epochs,
         learning_rate=args.learning_rate,
+        optimizer=args.optimizer,
+        lr_scheduler_type=args.lr_scheduler_type,
+        warmup_ratio=args.warmup_ratio,
+        weight_decay=args.weight_decay,
+        max_grad_norm=args.max_grad_norm,
         peft=peft,
         seed=args.seed,
         generation_samples=args.generation_samples,
@@ -206,6 +229,7 @@ def main() -> None:
         generation_eval_batch_size=args.generation_eval_batch_size,
         embedding_init_mode=args.embedding_init_mode,
         compute_base_bpb=args.compute_base_bpb,
+        tokenizer_strategy=args.tokenizer_strategy,
     )
 
     payload = run_model_integration(config)

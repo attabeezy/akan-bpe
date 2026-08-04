@@ -1,0 +1,370 @@
+{
+  "schema_version": 1,
+  "experiment_id": "qwen3_0.6b_extension_intrinsic_revision_v2",
+  "question": "How much intrinsic tokenization efficiency is retained when the locked 32K Akan candidate vocabulary extends, rather than replaces, the Qwen lexical interface?",
+  "protocol": {
+    "base_model_id": "Qwen/Qwen3-0.6B-Base",
+    "extension_dir": "models/revision_v2/qwen3_0.6b_extension_v32000",
+    "replacement_path": "models/revision_v2/mixed_bpe_v32000.json",
+    "asr_test": {
+      "path": "data/revision_v2/aka_asr_test.jsonl",
+      "rows": 1010,
+      "sha256": "2bce5ef6ac3b9ea73e03af17a9e0ac5a907fb816ebf5ca70972588469c405111"
+    },
+    "formal_test": {
+      "path": "data/pristine_twi_test.jsonl",
+      "rows": 2500,
+      "sha256": "cd7380ed5603e950943eae5e8b69a9fd7733da809bb67d26a739e9482e146214"
+    },
+    "bootstrap": {
+      "method": "paired row resampling of aggregate fertility difference",
+      "resamples": 1000,
+      "seed": 20260802,
+      "confidence_level": 0.95
+    }
+  },
+  "extension_contract": {
+    "selection": {
+      "rule": "Traverse the locked 32K mixed-BPE vocabulary in learned token-ID order; exclude the shared special tokens and exact base-vocabulary collisions; append every remaining token without normalization.",
+      "candidate_vocab_size": 32000,
+      "excluded_special_token_count": 8,
+      "exact_collision_count": 5836,
+      "added_token_count": 26156
+    },
+    "output": {
+      "directory": "models/revision_v2/qwen3_0.6b_extension_v32000",
+      "extended_vocab_size": 177825,
+      "original_ids_stable": true,
+      "round_trip_verified": true,
+      "files": [
+        {
+          "path": "models/revision_v2/qwen3_0.6b_extension_v32000/chat_template.jinja",
+          "bytes": 4200,
+          "sha256": "bfbcd7bf3f08041bdcff4afb09f83677fe4f7e5b8b9c07e6be43651d88696aab"
+        },
+        {
+          "path": "models/revision_v2/qwen3_0.6b_extension_v32000/tokenizer.json",
+          "bytes": 16247949,
+          "sha256": "798795c83f0d9c019981078095868ad8ebe2e2c5ad51613dd27c2a57e542056e"
+        },
+        {
+          "path": "models/revision_v2/qwen3_0.6b_extension_v32000/tokenizer_config.json",
+          "bytes": 726,
+          "sha256": "b271a1c91521384eb6d794eb27c9d55b3ff93ade6beb59e668d55411155ea16e"
+        }
+      ]
+    },
+    "model_interface": {
+      "embedding_resize": "append rows; original rows and token IDs remain unchanged",
+      "initialization": "mean of the original tokenizer subwords for each added surface",
+      "output_head": "initialize appended output rows with the same mean-subword rule; retain the controlled pipeline's untied input/output interface",
+      "base_model_tied_embeddings": true,
+      "controlled_pipeline_tied_embeddings": false,
+      "cost": {
+        "hidden_size": 1024,
+        "untied_input_output_embeddings": true,
+        "matrix_count": 2,
+        "base_vocab_size": 151669,
+        "base_embedding_rows": 151936,
+        "added_tokens": 26156,
+        "extended_vocab_size": 177825,
+        "extended_embedding_rows": 177856,
+        "replacement_vocab_size": 32000,
+        "replacement_embedding_rows": 32000,
+        "pad_to_multiple_of": 64,
+        "incremental_embedding_rows": 25920,
+        "incremental_parameters": 53084160,
+        "incremental_fp16_mib": 101.25,
+        "incremental_fp32_mib": 202.5,
+        "total_extension_parameters": 364249088,
+        "total_extension_fp16_mib": 694.75,
+        "replacement_parameters": 65536000,
+        "replacement_fp16_mib": 125.0
+      }
+    }
+  },
+  "metrics": {
+    "original": {
+      "asr": {
+        "tokenizer_name": "original",
+        "tokenizer_reference": "Qwen/Qwen3-0.6B-Base",
+        "source_file": "data/revision_v2/aka_asr_test.jsonl",
+        "num_samples": 1010,
+        "vocab_size": 151669,
+        "fertility": 2.3937722060140385,
+        "fertility_sample_std": 0.27694322510991304,
+        "total_tokens": 82870,
+        "total_words": 34619,
+        "sequence_length": {
+          "mean": 82.04950495049505,
+          "median": 79.0,
+          "p90": 109.0,
+          "p95": 120.0,
+          "max": 191
+        },
+        "vocabulary_utilization": {
+          "unique_token_ids": 1930,
+          "ratio": 0.012725078954829267,
+          "percent": 1.2725078954829268
+        },
+        "bytes_per_token": 2.2512610112223967,
+        "characters_per_token": 2.0849402678894653,
+        "unknown_tokens": {
+          "count": 0,
+          "ratio": 0.0
+        },
+        "special_tokens": {
+          "count": 0,
+          "ratio": 0.0
+        }
+      },
+      "formal": {
+        "tokenizer_name": "original",
+        "tokenizer_reference": "Qwen/Qwen3-0.6B-Base",
+        "source_file": "data/pristine_twi_test.jsonl",
+        "num_samples": 2500,
+        "vocab_size": 151669,
+        "fertility": 2.5326628193140164,
+        "fertility_sample_std": 0.12154786046822116,
+        "total_tokens": 1765965,
+        "total_words": 697276,
+        "sequence_length": {
+          "mean": 706.386,
+          "median": 690.0,
+          "p90": 870.0999999999999,
+          "p95": 939.0499999999997,
+          "max": 4089
+        },
+        "vocabulary_utilization": {
+          "unique_token_ids": 8904,
+          "ratio": 0.058706789126321136,
+          "percent": 5.870678912632114
+        },
+        "bytes_per_token": 2.151365400786539,
+        "characters_per_token": 1.9265070372289372,
+        "unknown_tokens": {
+          "count": 0,
+          "ratio": 0.0
+        },
+        "special_tokens": {
+          "count": 0,
+          "ratio": 0.0
+        }
+      }
+    },
+    "extension": {
+      "asr": {
+        "tokenizer_name": "extension",
+        "tokenizer_reference": "models/revision_v2/qwen3_0.6b_extension_v32000",
+        "source_file": "data/revision_v2/aka_asr_test.jsonl",
+        "num_samples": 1010,
+        "vocab_size": 177825,
+        "fertility": 1.841445449030879,
+        "fertility_sample_std": 0.1332178817638467,
+        "total_tokens": 63749,
+        "total_words": 34619,
+        "sequence_length": {
+          "mean": 63.11782178217822,
+          "median": 62.0,
+          "p90": 85.0,
+          "p95": 93.54999999999995,
+          "max": 149
+        },
+        "vocabulary_utilization": {
+          "unique_token_ids": 4371,
+          "ratio": 0.024580345845634753,
+          "percent": 2.4580345845634755
+        },
+        "bytes_per_token": 2.926508651116096,
+        "characters_per_token": 2.710301338060205,
+        "unknown_tokens": {
+          "count": 0,
+          "ratio": 0.0
+        },
+        "special_tokens": {
+          "count": 0,
+          "ratio": 0.0
+        }
+      },
+      "formal": {
+        "tokenizer_name": "extension",
+        "tokenizer_reference": "models/revision_v2/qwen3_0.6b_extension_v32000",
+        "source_file": "data/pristine_twi_test.jsonl",
+        "num_samples": 2500,
+        "vocab_size": 177825,
+        "fertility": 1.8887269890258664,
+        "fertility_sample_std": 0.06183523151191848,
+        "total_tokens": 1316964,
+        "total_words": 697276,
+        "sequence_length": {
+          "mean": 526.7856,
+          "median": 516.0,
+          "p90": 650.0,
+          "p95": 705.0,
+          "max": 2907
+        },
+        "vocabulary_utilization": {
+          "unique_token_ids": 16350,
+          "ratio": 0.0919443272880641,
+          "percent": 9.19443272880641
+        },
+        "bytes_per_token": 2.8848442326441726,
+        "characters_per_token": 2.583323462144751,
+        "unknown_tokens": {
+          "count": 0,
+          "ratio": 0.0
+        },
+        "special_tokens": {
+          "count": 0,
+          "ratio": 0.0
+        }
+      }
+    },
+    "replacement": {
+      "asr": {
+        "tokenizer_name": "replacement",
+        "tokenizer_reference": "models/revision_v2/mixed_bpe_v32000.json",
+        "source_file": "data/revision_v2/aka_asr_test.jsonl",
+        "num_samples": 1010,
+        "vocab_size": 32000,
+        "fertility": 1.2070828157947948,
+        "fertility_sample_std": 0.08841236717254061,
+        "total_tokens": 41788,
+        "total_words": 34619,
+        "sequence_length": {
+          "mean": 41.37425742574258,
+          "median": 40.0,
+          "p90": 56.0,
+          "p95": 61.0,
+          "max": 97
+        },
+        "vocabulary_utilization": {
+          "unique_token_ids": 4108,
+          "ratio": 0.128375,
+          "percent": 12.837499999999999
+        },
+        "bytes_per_token": 4.464487412654351,
+        "characters_per_token": 4.134655882071408,
+        "unknown_tokens": {
+          "count": 0,
+          "ratio": 0.0
+        },
+        "special_tokens": {
+          "count": 0,
+          "ratio": 0.0
+        }
+      },
+      "formal": {
+        "tokenizer_name": "replacement",
+        "tokenizer_reference": "models/revision_v2/mixed_bpe_v32000.json",
+        "source_file": "data/pristine_twi_test.jsonl",
+        "num_samples": 2500,
+        "vocab_size": 32000,
+        "fertility": 1.2151974254097373,
+        "fertility_sample_std": 0.06112867586371265,
+        "total_tokens": 847328,
+        "total_words": 697276,
+        "sequence_length": {
+          "mean": 338.9312,
+          "median": 332.0,
+          "p90": 419.0,
+          "p95": 453.0499999999997,
+          "max": 1821
+        },
+        "vocabulary_utilization": {
+          "unique_token_ids": 15240,
+          "ratio": 0.47625,
+          "percent": 47.625
+        },
+        "bytes_per_token": 4.4837843196495335,
+        "characters_per_token": 4.015144076437932,
+        "unknown_tokens": {
+          "count": 4,
+          "ratio": 4.720722081649609e-06
+        },
+        "special_tokens": {
+          "count": 4,
+          "ratio": 4.720722081649609e-06
+        }
+      }
+    }
+  },
+  "comparisons": {
+    "asr": {
+      "original_fertility": 2.3937722060140385,
+      "extension_fertility": 1.841445449030879,
+      "replacement_fertility": 1.2070828157947948,
+      "extension_reduction_vs_original_percent": 23.073488596597084,
+      "replacement_reduction_vs_original_percent": 49.57403161578375,
+      "extension_minus_replacement_fertility": 0.6343626332360841
+    },
+    "formal": {
+      "original_fertility": 2.5326628193140164,
+      "extension_fertility": 1.8887269890258664,
+      "replacement_fertility": 1.2151974254097373,
+      "extension_reduction_vs_original_percent": 25.425249084778013,
+      "replacement_reduction_vs_original_percent": 52.01898112363496,
+      "extension_minus_replacement_fertility": 0.6735295636161291
+    }
+  },
+  "bootstrap_confidence_intervals": {
+    "extension_minus_original": {
+      "asr": {
+        "difference_candidate_minus_baseline": -0.5523267569831596,
+        "confidence_level": 0.95,
+        "lower": -0.5642231152945096,
+        "upper": -0.5401513985638692,
+        "resamples": 1000,
+        "seed": 20260802
+      },
+      "formal": {
+        "difference_candidate_minus_baseline": -0.6439358302881499,
+        "confidence_level": 0.95,
+        "lower": -0.6477036610626957,
+        "upper": -0.6399633298335974,
+        "resamples": 1000,
+        "seed": 20260802
+      }
+    },
+    "replacement_minus_original": {
+      "asr": {
+        "difference_candidate_minus_baseline": -1.1866893902192437,
+        "confidence_level": 0.95,
+        "lower": -1.2014941858641843,
+        "upper": -1.1721656262544318,
+        "resamples": 1000,
+        "seed": 20260802
+      },
+      "formal": {
+        "difference_candidate_minus_baseline": -1.317465393904279,
+        "confidence_level": 0.95,
+        "lower": -1.3222413468830037,
+        "upper": -1.3127973029291196,
+        "resamples": 1000,
+        "seed": 20260802
+      }
+    },
+    "extension_minus_replacement": {
+      "asr": {
+        "difference_candidate_minus_baseline": 0.6343626332360841,
+        "confidence_level": 0.95,
+        "lower": 0.628534427023021,
+        "upper": 0.6402915052137738,
+        "resamples": 1000,
+        "seed": 20260802
+      },
+      "formal": {
+        "difference_candidate_minus_baseline": 0.6735295636161291,
+        "confidence_level": 0.95,
+        "lower": 0.6719796650135158,
+        "upper": 0.6750808522155334,
+        "resamples": 1000,
+        "seed": 20260802
+      }
+    }
+  },
+  "scope_decision": {
+    "status": "intrinsic_complete_model_quality_pending",
+    "model_quality_gate": "Do not select extension or replacement from fertility alone; run the controlled Qwen BPB, chrF/chrF++, downstream, throughput, and checkpoint comparison."
+  }
+}

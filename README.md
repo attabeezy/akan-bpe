@@ -49,6 +49,27 @@ rather than evidence that the curve has fully plateaued. See
 [`results/vocab_ablation_tradeoff.md`](results/vocab_ablation_tradeoff.md) and
 [`results/vocab_ablation_fertility.svg`](results/vocab_ablation_fertility.svg).
 
+The Qwen 0.6B extension contract is now frozen as well: 26,156 novel tokens from that 32K
+candidate vocabulary are appended without changing any original token ID. Its intrinsic v2
+comparison is complete; the controlled BPB/chrF/downstream model run remains pending.
+
+Routing is now explicitly secondary analysis. The frozen audit reconstructs the historical
+TF-IDF/logistic-regression protocol and metrics, but the near-perfect result separates two source
+corpora rather than a genuinely ambiguous domain challenge set. The balanced mixed tokenizer is
+the primary deployment path; robust routing is deferred.
+
+The remaining P0 GPU evidence is execution-ready through one frozen 15-run contract:
+
+```bash
+python scripts/run_revision_gpu_matrix.py validate
+python scripts/run_revision_gpu_matrix.py status
+python scripts/run_revision_gpu_matrix.py run --next
+python scripts/aggregate_revision_gpu_matrix.py
+```
+
+Run one `--next` job per fresh Kaggle/Colab GPU process. Results are resumable and the aggregator
+will reject incomplete or configuration-drifted matrices.
+
 ## Notebooks
 
 | Notebook | nbviewer | Colab | Kaggle |
@@ -78,6 +99,9 @@ akan-bpe/
 - [x] Revision artifact manifest and integrity validator
 - [x] Leak-free ASR revision-v2 split and v1-v2 scientific checkpoint
 - [x] Balanced 4K/8K/16K/32K vocabulary-size ablation
+- [x] Qwen vocabulary-extension builder and intrinsic checkpoint
+- [x] Router protocol audit and demotion to secondary analysis
+- [x] Frozen extension/replacement and multi-seed GPU execution harness
 - [ ] IEEE Ghana ICAST 2026 write-up
 
 ## License

@@ -342,6 +342,36 @@ artifacts:
         equals: data/revision_v2/aka_asr_test.jsonl
       - path: total_samples
         equals: 1010
+  router_audit_revision_v2:
+    kind: secondary_analysis_audit
+    path: results/router_audit_revision_v2.json
+    bytes: 5500
+    sha256: 12286f480f268a385d2c39bbbbfdfb10b1d9fd8f3cbf0446443c3625fef611a4
+    assertions:
+      - path: experiment_id
+        equals: router-audit-revision-v2
+      - path: status
+        equals: complete_demoted_to_secondary_analysis
+      - path: decision.paper_role
+        equals: secondary_analysis
+      - path: decision.central_contribution
+        equals: false
+      - path: protocol.split.total
+        equals: 53085
+      - path: protocol.split.test
+        equals: 10617
+      - path: heldout_source_classification.confusion_matrix.rows_true_columns_predicted
+        equals:
+          - [1617, 0]
+          - [1, 8999]
+      - path: external_corpus_classification.ml.confusion_matrix.rows_true_columns_predicted
+        equals:
+          - [1010, 0]
+          - [2, 2498]
+      - path: limitations.ambiguous_challenge_set_available
+        equals: false
+      - path: limitations.routing_latency_measured
+        equals: false
   asr_split_revision_v1_vs_v2:
     kind: scientific_checkpoint
     path: results/asr_split_revision_v1_vs_v2.json
@@ -424,11 +454,83 @@ artifacts:
     path: results/vocab_ablation_fertility.png
     bytes: 103223
     sha256: 849c6bb05ab8a3a780e193befed22f92d906940cc99438c5d689ae405fd5f231
+  qwen3_0.6b_extension_tokenizer:
+    kind: active_extension_tokenizer
+    path: models/revision_v2/qwen3_0.6b_extension_v32000/tokenizer.json
+    bytes: 16247949
+    sha256: 798795c83f0d9c019981078095868ad8ebe2e2c5ad51613dd27c2a57e542056e
+  qwen3_0.6b_extension_tokenizer_config:
+    kind: active_extension_tokenizer_configuration
+    path: models/revision_v2/qwen3_0.6b_extension_v32000/tokenizer_config.json
+    bytes: 726
+    sha256: b271a1c91521384eb6d794eb27c9d55b3ff93ade6beb59e668d55411155ea16e
+  qwen3_0.6b_extension_chat_template:
+    kind: preserved_base_tokenizer_configuration
+    path: models/revision_v2/qwen3_0.6b_extension_v32000/chat_template.jinja
+    bytes: 4200
+    sha256: bfbcd7bf3f08041bdcff4afb09f83677fe4f7e5b8b9c07e6be43651d88696aab
+  qwen3_0.6b_extension_metadata:
+    kind: active_extension_contract
+    path: results/vocab_extension_qwen3_0.6b_v32000.json
+    bytes: 551216
+    sha256: e8b7eb31e46d3e0c93f5191c10102adcfb33ef8865158e1a75ad3004453656bb
+    assertions:
+      - path: experiment_id
+        equals: qwen3_0.6b_vocab_extension_v32000
+      - path: strategy
+        equals: extension
+      - path: base_model_id
+        equals: Qwen/Qwen3-0.6B-Base
+      - path: selection.candidate_vocab_size
+        equals: 32000
+      - path: selection.exact_collision_count
+        equals: 5836
+      - path: selection.added_token_count
+        equals: 26156
+      - path: output.extended_vocab_size
+        equals: 177825
+      - path: output.original_ids_stable
+        equals: true
+      - path: output.round_trip_verified
+        equals: true
+      - path: model_interface.cost.base_embedding_rows
+        equals: 151936
+      - path: model_interface.cost.incremental_embedding_rows
+        equals: 25920
+  qwen3_0.6b_extension_intrinsic:
+    kind: active_extension_intrinsic_result
+    path: results/vocab_extension_intrinsic_revision_v2.json
+    bytes: 12813
+    sha256: 78efb5f856ed5c8988490f93ac238f957b798d3eaca044cbc5d882e825fae3c6
+    assertions:
+      - path: experiment_id
+        equals: qwen3_0.6b_extension_intrinsic_revision_v2
+      - path: protocol.asr_test.path
+        equals: data/revision_v2/aka_asr_test.jsonl
+      - path: protocol.asr_test.rows
+        equals: 1010
+      - path: protocol.formal_test.rows
+        equals: 2500
+      - path: metrics.*.asr.num_samples
+        equals: 1010
+      - path: metrics.*.formal.num_samples
+        equals: 2500
+      - path: extension_contract.selection.added_token_count
+        equals: 26156
+      - path: extension_contract.output.original_ids_stable
+        equals: true
+      - path: scope_decision.status
+        equals: intrinsic_complete_model_quality_pending
+  revision_v2_gpu_matrix:
+    kind: executable_experiment_contract
+    path: config/revision_gpu_matrix.yaml
+    bytes: 3630
+    sha256: 883c6c91347d22757616cd44e373ea8bb96abdc1182fb53f28305a184a117a5d
   technical_report:
     kind: manuscript_source
     path: docs/report.md
-    bytes: 37818
-    sha256: 7a97bfcf696343afa8c7a01da965c617c4c36acf642feeb293f5d286a2c64f44
+    bytes: 40879
+    sha256: b1f5bc63da51a7436234e6c26f1baaa0d4a7fedbed95c55efeabb94da548e935
 
 runs:
   - id: run-qwen-0.6b-mixed
@@ -557,17 +659,42 @@ planned_revision:
       multi-seed experiments. This is a boundary selection, not evidence of a fully
       observed plateau, and controlled model-quality evidence may override it.
   vocabulary_extension:
+    status: intrinsic_complete_model_quality_pending
     anchor_model: Qwen/Qwen3-0.6B-Base
     vocab_size: 32000
+    candidate_tokenizer: mixed_bpe_revision_v2_v32000
+    extension_contract_artifact: qwen3_0.6b_extension_metadata
+    intrinsic_result_artifact: qwen3_0.6b_extension_intrinsic
     comparison:
       - original
       - extension
       - replacement
     initialization: mean_subword
     extension_budgets:
-      status: pending_decision
-      note: Extension token budgets will be frozen before implementation.
+      status: frozen
+      primary:
+        candidate_vocab_size: 32000
+        exact_base_collisions_excluded: 5836
+        actual_added_tokens: 26156
+        selection_rule: >-
+          Traverse the locked 32K mixed-BPE vocabulary in learned ID order, exclude
+          shared special tokens and exact base-vocabulary collisions, and append every
+          remaining surface without normalization.
+    model_quality_run:
+      status: execution_ready_pending_gpu
+      matrix_artifact: revision_v2_gpu_matrix
+      seeds: [17, 42, 73]
+      required_metrics:
+        - full_coverage_bpb
+        - chrf
+        - chrfpp
+        - downstream_task
+        - throughput_or_processed_tokens
+        - checkpoint_size
   multi_seed:
+    status: execution_ready_pending_gpu
+    matrix_artifact: revision_v2_gpu_matrix
+    expected_runs: 15
     vocab_size: 32000
     seeds:
       - 17
@@ -580,6 +707,17 @@ planned_revision:
       - random
       - mean_subword
     strategy: replacement
+  router:
+    status: complete_demoted_to_secondary_analysis
+    artifact: router_audit_revision_v2
+    paper_role: secondary_analysis
+    primary_deployment_path: balanced_mixed_tokenizer
+    challenge_set_status: not_available
+    latency_status: not_measured
+    future_work:
+      - ambiguous_and_mixed_register_challenge_set
+      - code_switched_and_out_of_domain_evaluation
+      - routing_and_tokenizer_switching_overhead
 
 run_log:
   completed: 10
@@ -593,7 +731,8 @@ limitations:
   - Historical result payloads omitted the training seed.
   - Optimizer, scheduler, warmup, weight decay, and clipping defaults were not fully exported.
   - Dataset and model licenses require final manuscript verification.
-  - This audit manifest does not yet drive experiment execution.
+  - The audit manifest validates evidence; the separately hash-pinned revision GPU matrix drives
+    new model experiment execution.
   - One normalized ASR sentence overlapped the historical v1 training and test splits; the
     active revision-v2 test set removes it and has no leakage exceptions.
   - The historical router classifier was serialized with scikit-learn 1.8.0 and evaluated

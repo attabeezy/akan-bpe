@@ -10,7 +10,8 @@ This report documents the Akan-BPE project, which investigates the "Tokenization
 - ASR tokenizer reduces fertility from 2.322 to 1.225 tokens/word (~47% reduction vs best multilingual baseline, mT5) on the leak-corrected 1,010-sample ASR revision-v2 test set
 - TTS tokenizer reduces fertility from 2.356 to 1.263 tokens/word (~46% reduction vs best multilingual baseline, mBERT)
 - Balanced mixed tokenizer differentiates across domains: 1.297 (ASR) and 1.268 (TTS)
-- ML-based router achieves 99.99% domain classification accuracy on a held-out test set
+- The historical ML router achieves 99.99% source-corpus classification accuracy, but is retained
+  only as secondary analysis because no ambiguous-domain challenge set was evaluated
 - The 5-run model ladder and M4 generation-quality evaluation are preserved in the executed split notebooks and consolidated in `results/notebook-ladder-results.json`.
 - Mean-of-subword embedding initialization beats random initialization in every rung, lowering perplexity, BPB, chrF, and chrF++ without extra training.
 - The notebook-derived artifact shows all five mean-of-subword arms beat their base model on corrected full-coverage BPB while cutting token use by 44.7-58.9%.
@@ -164,6 +165,10 @@ We implemented two routing approaches:
 
 ### 4.2 Experiment 2: Routing Accuracy
 
+> **Secondary-analysis scope.** This experiment distinguishes the source corpus of ASR
+> transcriptions from separately collected formal text. It does not test ambiguous, mixed-register,
+> code-switched, or out-of-domain routing and is not treated as a central paper contribution.
+
 **Setup:**
 - Test ASR test set (ground truth: ASR domain)
 - Test TTS test set (ground truth: TTS domain)
@@ -177,9 +182,10 @@ We implemented two routing approaches:
 | ML Classifier | **100%** (1,010/1,010) | **99.9%** (2,498/2,500) |
 
 **Key Findings:**
-- ML classifier significantly outperforms heuristic router on both regimes
+- ML classifier substantially outperforms the heuristic on these two source corpora
 - Heuristic router misclassifies 22.4% of TTS samples as ASR and 19.8% of ASR samples as TTS
 - ML router reduces TTS misclassification from 22.4% to 0.1% and routes the ASR test set perfectly
+- Near-perfect source-corpus separation does not establish generalization to ambiguous input
 
 ### 4.3 Experiment 3: End-to-End Fertility with Router
 
@@ -197,7 +203,7 @@ We implemented two routing approaches:
 | ML Router | **1.263** | **46%** |
 
 **Key Findings:**
-- ML router achieves optimal fertility (matches always-TTS strategy)
+- On this formal-text source corpus, the ML route matches the always-TTS strategy
 - Heuristic router loses ~4.5% efficiency due to misclassification
 
 ### 4.4 Experiment 4: Leak-Correction Checkpoint
@@ -231,6 +237,30 @@ encodings as the historical mixed tokenizer, preserving the meaning of the exist
 
 ![Fertility by vocabulary size](../results/vocab_ablation_fertility.svg)
 
+### 4.6 Experiment 6: Vocabulary Extension Baseline (Intrinsic Checkpoint)
+
+The extension baseline preserves Qwen's full tokenizer and appends every novel, non-special token
+from the locked 32K mixed-BPE vocabulary. Of 32,000 candidates, eight are shared special tokens,
+5,836 collide exactly with existing Qwen tokens, and 26,156 are appended. Round-trip tests confirm
+that all 151,669 original token IDs remain unchanged.
+
+| Strategy | ASR fertility | Reduction vs original | Formal fertility | Reduction vs original |
+|---|---:|---:|---:|---:|
+| Original Qwen | 2.393772 | — | 2.532663 | — |
+| Extension (+26,156) | 1.841445 | 23.1% | 1.888727 | 25.4% |
+| 32K replacement | **1.207083** | **49.6%** | **1.215197** | **52.0%** |
+
+Paired bootstrap intervals exclude zero for every original/extension/replacement fertility
+difference. Replacement is intrinsically more efficient, but this does not resolve model quality:
+extension preserves Qwen's multilingual lexical interface while replacement discards it.
+
+Qwen preallocates 151,936 embedding rows for its 151,669-token tokenizer. With the controlled
+pipeline's untied input and output matrices, extension pads to 177,856 rows and adds 25,920 actual
+model rows, or 53.08M parameters (101.25 MiB FP16). The complete extension lexical interface is
+694.75 MiB FP16, versus 125.00 MiB for 32K replacement. A controlled Qwen run must now compare
+full-coverage BPB, chrF/chrF++, downstream performance, throughput, and checkpoint size before the
+adaptation strategy is selected.
+
 ---
 
 ## 5. Discussion
@@ -253,11 +283,24 @@ This confirms that corpus imbalance, not domain incompatibility, was the root ca
 
 ### 5.3 Router Value
 
-The ML router is the stronger option when a deployment keeps separate ASR and TTS tokenizers:
-- The classifier training path uses a stratified 80/20 split over 53,085 labeled training samples (8,085 ASR + 45,000 TTS) and reports 99.99% train/test accuracy.
-- The revision-v2 routing benchmarks route ASR perfectly (1,010/1,010) and TTS near-perfectly (2,498/2,500).
-- The heuristic router remains useful as a dependency-light fallback, but it misroutes 200/1,010 ASR samples and 561/2,500 TTS samples.
-- Router latency has not been benchmarked in this repo; it should be measured before making deployment latency claims.
+Routing is retained only as a secondary implementation analysis. The classifier uses word-level
+TF-IDF (lowercased 1-2 grams, 5,000 maximum features, `min_df=2`, L2 normalization) followed by
+logistic regression (`C=1`, L2-equivalent default objective, `lbfgs`, 1,000 maximum iterations,
+random state 42). Its stratified 80/20 split draws from 53,085 source-labelled examples: 8,085 ASR
+and 45,000 formal text. The 10,617-example holdout has 1,617/9,000 examples by class and one error,
+for 99.9906% accuracy and macro F1 99.9818%; the confusion matrix, with rows=true and
+columns=predicted in `[ASR, TTS]` order, is `[[1617, 0], [1, 8999]]`.
+
+On the active external corpus tests, the ML confusion matrix is `[[1010, 0], [2, 2498]]`
+(99.9430% accuracy; macro F1 99.9305%), versus `[[810, 200], [561, 1939]]` for the heuristic
+(78.3191% accuracy; macro F1 75.8171%). These are source-corpus classification results, not
+evidence about realistically ambiguous domains. No mixed/code-switched challenge set, routing
+latency, tokenizer-switching overhead, or end-to-end model effect was measured. Moreover, separate
+replacement tokenizers require compatible embedding interfaces and cannot be switched freely for
+one frozen model checkpoint. The historical pickle was produced with scikit-learn 1.8.0 and emits
+an inconsistent-version warning under 1.9.0. Accordingly, the balanced mixed tokenizer is the
+primary deployment path; robust routing is deferred to future work. Exact settings and all
+per-class metrics are in `results/router_audit_revision_v2.json`.
 
 ---
 
@@ -352,7 +395,9 @@ This project demonstrates that:
 
 2. **Domain specialization is real** — ASR and TTS text benefit from different tokenizers, confirming the dual-regime hypothesis for Akan.
 
-3. **ML routing is superior to heuristic routing** — A logistic regression classifier achieves 99.99% accuracy on a held-out test set vs 77.6% for rule-based heuristics.
+3. **Source-corpus classification is easy in the current data** — Logistic regression reaches
+   99.99% on the held-out source labels, versus 78.3% externally for the heuristic, but this does
+   not establish routing under ambiguous input and remains secondary analysis.
 
 4. **Corpus balance unlocks the mixed tokenizer** — A balanced mixed tokenizer (equal corpus sizes via upsampling) genuinely interpolates between domains, making it a viable single-tokenizer option at minimal fertility cost.
 

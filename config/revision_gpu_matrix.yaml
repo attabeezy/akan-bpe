@@ -1,0 +1,127 @@
+schema_version: 1
+matrix_id: revision-v2-p0-gpu
+purpose: >-
+  Execute the controlled Qwen vocabulary-extension comparison and the three-seed
+  replacement-tokenizer initialization validation under one frozen protocol.
+
+paths:
+  results_dir: results/revision_v2/gpu_runs
+  models_dir: models/revision_v2/gpu_runs
+  aggregate_result: results/revision_v2/gpu_matrix_aggregate.json
+
+protocol:
+  device_mode: colab-qlora
+  train_file: data/pristine_twi_train.jsonl
+  eval_file: data/pristine_twi_test.jsonl
+  max_train_samples: 4096
+  max_eval_samples: 512
+  max_length: 256
+  batch_size: 1
+  gradient_accumulation_steps: 16
+  epochs: 1.0
+  learning_rate: 0.0002
+  optimizer: adamw_torch
+  lr_scheduler_type: linear
+  warmup_ratio: 0.0
+  weight_decay: 0.0
+  max_grad_norm: 1.0
+  dataloader_num_workers: 0
+  data_seed: same_as_run_seed
+  compute_base_bpb: true
+  generation_samples: 3
+  generation_max_new_tokens: 32
+  generation_evaluation:
+    examples: 512
+    prompt_words: 48
+    reference_words: 64
+    max_new_tokens: 64
+    batch_size: 4
+  qlora:
+    rank: 16
+    alpha: 32
+    dropout: 0.05
+    target_modules:
+      - q_proj
+      - k_proj
+      - v_proj
+      - o_proj
+      - gate_proj
+      - up_proj
+      - down_proj
+
+seeds: [17, 42, 73]
+vocab_size: 32000
+
+tokenizers:
+  replacement: models/revision_v2/mixed_bpe_v32000.json
+  extension: models/revision_v2/qwen3_0.6b_extension_v32000
+
+arms:
+  - model_slug: qwen-0.6b
+    model_id: Qwen/Qwen3-0.6B-Base
+    strategy: replacement
+    initialization: random
+    goals: [multi_seed]
+  - model_slug: qwen-0.6b
+    model_id: Qwen/Qwen3-0.6B-Base
+    strategy: replacement
+    initialization: mean_subword
+    goals: [multi_seed, extension_baseline_reference]
+  - model_slug: qwen-0.6b
+    model_id: Qwen/Qwen3-0.6B-Base
+    strategy: extension
+    initialization: mean_subword
+    goals: [vocabulary_extension, multi_seed_if_headline]
+  - model_slug: qwen-1.7b
+    model_id: Qwen/Qwen3-1.7B-Base
+    strategy: replacement
+    initialization: random
+    goals: [multi_seed]
+  - model_slug: qwen-1.7b
+    model_id: Qwen/Qwen3-1.7B-Base
+    strategy: replacement
+    initialization: mean_subword
+    goals: [multi_seed]
+
+expected_runs: 15
+required_result_fields:
+  - seed
+  - eval.bpb.experiment.bits_per_byte
+  - eval.bpb.base.bits_per_byte
+  - eval.generation_quality.chrf
+  - eval.generation_quality.chrfpp
+  - training.trainer_metrics.train_runtime
+  - training.estimated_processed_non_padding_tokens
+  - training.checkpoint_bytes
+  - reload_verification.success
+
+paired_comparisons:
+  - id: qwen-0.6b-mean-subword-minus-random
+    model_slug: qwen-0.6b
+    challenger: {strategy: replacement, initialization: mean_subword}
+    reference: {strategy: replacement, initialization: random}
+  - id: qwen-1.7b-mean-subword-minus-random
+    model_slug: qwen-1.7b
+    challenger: {strategy: replacement, initialization: mean_subword}
+    reference: {strategy: replacement, initialization: random}
+  - id: qwen-0.6b-extension-minus-replacement
+    model_slug: qwen-0.6b
+    challenger: {strategy: extension, initialization: mean_subword}
+    reference: {strategy: replacement, initialization: mean_subword}
+
+metrics:
+  - path: eval.bpb.experiment.bits_per_byte
+    name: full_coverage_bpb
+    higher_is_better: false
+  - path: eval.generation_quality.chrf
+    name: chrf
+    higher_is_better: true
+  - path: eval.generation_quality.chrfpp
+    name: chrfpp
+    higher_is_better: true
+  - path: training.trainer_metrics.train_runtime
+    name: train_runtime_seconds
+    higher_is_better: false
+  - path: training.checkpoint_bytes
+    name: checkpoint_bytes
+    higher_is_better: false

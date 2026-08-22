@@ -1,7 +1,10 @@
 # Akan-BPE — Project Reference
 **Eliminating the Tokenization Tax for Akan via BPE Tokenizer Experiments**
 
-**Status:** ICAST submission preparation. The current 5-run M3/M4 ladder is preserved in the executed split notebooks and consolidated in `results/notebook-ladder-results.json`; the notebooks remain the source of truth.
+**Status:** ICAST reviewer-revision preparation. The frozen 15-run revision-v2 GPU matrix is
+complete and validated in `results/revision_v2/gpu_runs`, with generated statistics in
+`results/revision_v2/gpu_matrix_aggregate.json`. The remaining critical experiment is the P1
+downstream Akan task; qualitative analysis, manuscript revision, and final QA also remain.
 **Scope:** Akan (Twi), tokenizer experiments with ML routing
 **Paper target:** IEEE Ghana ICAST 2026. The active plan is now driven by
 this ICAST submission — see §0 (Research Design & Road to Paper) for the locked decisions and the
@@ -25,7 +28,7 @@ longer deferred by default, and the router must be documented or demoted.
 
 The revision is ready only when:
 
-- [ ] All four reviewer-required additions are complete: vocabulary-size ablation, vocabulary
+- [x] All four reviewer-required additions are complete: vocabulary-size ablation, vocabulary
   extension baseline, multi-seed runs, and router documentation/demotion.
 - [ ] BPB, chrF/chrF++, tokenizer training, QLoRA, and decoding protocols are fully specified.
 - [ ] At least one useful downstream Akan task has been evaluated on at least two adapted models.
@@ -140,13 +143,14 @@ historical mixed tokenizer.
 **Question:** Is full vocabulary replacement better than adding Akan-specific tokens while
 preserving the base tokenizer and its multilingual knowledge?
 
-**Implementation status (August 2, 2026):** The CPU-side extension contract and intrinsic
-comparison are complete. The locked 32K mixed vocabulary contributes 26,156 novel tokens after
+**Implementation status (August 22, 2026):** The CPU-side extension contract, intrinsic
+comparison, and controlled 0.6B three-seed GPU comparison are complete. The locked 32K mixed vocabulary contributes 26,156 novel tokens after
 excluding eight shared special tokens and 5,836 exact Qwen collisions. All 151,669 original token
 IDs remain stable after save/reload. The extension reduces fertility by 23.1% on ASR and 25.4% on
 formal Twi versus the original Qwen tokenizer, while full replacement reduces it by 49.6% and
-52.0%. The controlled model-quality run remains pending; fertility alone does not choose the
-winner.
+52.0%. Under the controlled model-quality protocol, extension is worse than full replacement on
+BPB and chrF/chrF++ while requiring a much larger lexical checkpoint. The downstream-task portion
+of the comparison remains the separate P1 gate in R9.
 
 **Execution readiness (August 2, 2026):** The remaining controlled runs are frozen in the single
 `config/revision_gpu_matrix.yaml` contract. The matrix runner expands stable IDs, executes exactly
@@ -165,7 +169,7 @@ matrices. No GPU results are claimed until those artifacts exist.
   handling, embedding resizing, tied output-head behavior, and serialization/reload behavior.
 - [x] Initialize new rows with mean-of-subword embeddings from the original tokenizer; optionally
   retain random initialization as a diagnostic arm.
-- [ ] Compare on one controlled anchor model first (`Qwen/Qwen3-0.6B`), using the same corpus,
+- [x] Compare on one controlled anchor model first (`Qwen/Qwen3-0.6B`), using the same corpus,
   training steps, QLoRA recipe, seed set, and evaluation examples as full replacement.
 - [ ] Compare **original tokenizer vs extension vs full replacement** on:
   - ASR and formal fertility.
@@ -199,24 +203,28 @@ throughput, and checkpoint size must decide whether preservation is worth that c
 
 **Question:** Are the initialization gains reliable or artifacts of a single run?
 
-**Execution status:** Code and the 15-run contract are complete; GPU execution is pending. The
+**Execution status (August 22, 2026):** All 15 frozen runs are complete and validate against
+matrix SHA-256 `883c6c91347d22757616cd44e373ea8bb96abdc1182fb53f28305a184a117a5d`.
+The per-run JSON artifacts are in `results/revision_v2/gpu_runs`, and
+`results/revision_v2/gpu_matrix_aggregate.json` contains arm means, sample standard deviations,
+per-seed deltas, and paired 95% t intervals. The
 matrix contains 12 replacement runs (two model sizes × two initialization modes × three seeds)
 plus three Qwen 0.6B extension/mean-subword runs. The Qwen 0.6B replacement/mean-subword arm is
 shared between R5 and R6, avoiding duplicate jobs. Seeds are frozen at 17, 42, and 73.
 
-- [ ] Use **three training seeds** for the controlled Qwen scale endpoints:
+- [x] Use **three training seeds** for the controlled Qwen scale endpoints:
   `Qwen/Qwen3-0.6B` and `Qwen/Qwen3-1.7B`.
-- [ ] Run both `random` and `mean_subword` initialization for every model/seed combination.
-- [ ] Reuse the existing run only if its full configuration and seed can be reconstructed exactly;
+- [x] Run both `random` and `mean_subword` initialization for every model/seed combination.
+- [x] Reuse the existing run only if its full configuration and seed can be reconstructed exactly;
   otherwise run three clean seeds.
-- [ ] Keep data order rules, training steps/epochs, effective batch size, learning rate, and
+- [x] Keep data order rules, training steps/epochs, effective batch size, learning rate, and
   evaluation examples fixed across arms.
-- [ ] Report each seed plus mean, standard deviation, and a paired confidence interval for:
+- [x] Report each seed plus mean, standard deviation, and a paired confidence interval for:
   corrected full-coverage BPB, chrF, and chrF++.
-- [ ] Report the direction and magnitude of the paired mean-subword-minus-random effect per seed.
+- [x] Report the direction and magnitude of the paired mean-subword-minus-random effect per seed.
 - [ ] Do not use seed-based significance language when there are too few independent runs; emphasize
   effect consistency and uncertainty.
-- [ ] If extension becomes a headline conclusion, run it with the same three seeds on the 0.6B
+- [x] If extension becomes a headline conclusion, run it with the same three seeds on the 0.6B
   anchor model.
 
 **Minimum GPU matrix**
@@ -469,7 +477,7 @@ The serialized scikit-learn 1.8.0 model also emits an inconsistent-version warni
 - [ ] Four mixed BPE tokenizer artifacts: 4K, 8K, 16K, and 32K.
 - [ ] Vocabulary-size aggregate JSON, table, and plot.
 - [ ] Vocabulary-extension implementation, tests, tokenizer/model artifacts, and comparison table.
-- [ ] Multi-seed per-run JSON files and aggregate statistics for both Qwen scale endpoints.
+- [x] Multi-seed per-run JSON files and aggregate statistics for both Qwen scale endpoints.
 - [ ] Fully documented or demoted router section, plus an optional challenge-set artifact.
 - [ ] BPB definition/tests and generated QLoRA hyperparameter table.
 - [ ] Downstream-task configuration, results, confidence intervals, and error analysis.

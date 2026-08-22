@@ -1,0 +1,582 @@
+{
+  "schema_version": 1,
+  "matrix_id": "revision-v2-p0-gpu",
+  "matrix_sha256": "883c6c91347d22757616cd44e373ea8bb96abdc1182fb53f28305a184a117a5d",
+  "status": "complete",
+  "run_count": 15,
+  "seeds": [
+    17,
+    42,
+    73
+  ],
+  "arm_summaries": {
+    "qwen-0.6b__replacement__random": {
+      "model_slug": "qwen-0.6b",
+      "model_id": "Qwen/Qwen3-0.6B-Base",
+      "strategy": "replacement",
+      "initialization": "random",
+      "metrics": {
+        "full_coverage_bpb": {
+          "values_by_seed": {
+            "17": 1.4539581236262016,
+            "42": 1.4527769847070704,
+            "73": 1.453715634423279
+          },
+          "mean": 1.4534835809188502,
+          "sample_standard_deviation": 0.0006238260240321758,
+          "n": 3
+        },
+        "chrf": {
+          "values_by_seed": {
+            "17": 14.891842065907799,
+            "42": 15.484898374129532,
+            "73": 14.28280580687481
+          },
+          "mean": 14.886515415637382,
+          "sample_standard_deviation": 0.601063985749096,
+          "n": 3
+        },
+        "chrfpp": {
+          "values_by_seed": {
+            "17": 14.865998535196637,
+            "42": 15.31956124533027,
+            "73": 14.29639203612148
+          },
+          "mean": 14.82731727221613,
+          "sample_standard_deviation": 0.5126802002687061,
+          "n": 3
+        },
+        "train_runtime_seconds": {
+          "values_by_seed": {
+            "17": 2527.9253,
+            "42": 2585.4461,
+            "73": 2635.0342
+          },
+          "mean": 2582.8018666666667,
+          "sample_standard_deviation": 53.603386947499345,
+          "n": 3
+        },
+        "checkpoint_bytes": {
+          "values_by_seed": {
+            "17": 2263517002.0,
+            "42": 2263516938.0,
+            "73": 2263516935.0
+          },
+          "mean": 2263516958.3333335,
+          "sample_standard_deviation": 37.84617990409776,
+          "n": 3
+        }
+      }
+    },
+    "qwen-0.6b__replacement__mean_subword": {
+      "model_slug": "qwen-0.6b",
+      "model_id": "Qwen/Qwen3-0.6B-Base",
+      "strategy": "replacement",
+      "initialization": "mean_subword",
+      "metrics": {
+        "full_coverage_bpb": {
+          "values_by_seed": {
+            "17": 1.2541622489775361,
+            "42": 1.255350824591671,
+            "73": 1.2547070285979667
+          },
+          "mean": 1.2547400340557247,
+          "sample_standard_deviation": 0.0005949748043491561,
+          "n": 3
+        },
+        "chrf": {
+          "values_by_seed": {
+            "17": 17.765338454624796,
+            "42": 17.136122680719605,
+            "73": 17.4713096574734
+          },
+          "mean": 17.4575902642726,
+          "sample_standard_deviation": 0.31483215980125934,
+          "n": 3
+        },
+        "chrfpp": {
+          "values_by_seed": {
+            "17": 17.86034135681873,
+            "42": 17.28557714774998,
+            "73": 17.470662260469766
+          },
+          "mean": 17.538860255012825,
+          "sample_standard_deviation": 0.2933883072846935,
+          "n": 3
+        },
+        "train_runtime_seconds": {
+          "values_by_seed": {
+            "17": 2734.9361,
+            "42": 2653.4151,
+            "73": 2662.2259
+          },
+          "mean": 2683.5257,
+          "sample_standard_deviation": 44.7401326582744,
+          "n": 3
+        },
+        "checkpoint_bytes": {
+          "values_by_seed": {
+            "17": 2263517012.0,
+            "42": 2263516943.0,
+            "73": 2263516944.0
+          },
+          "mean": 2263516966.3333335,
+          "sample_standard_deviation": 39.55165398985652,
+          "n": 3
+        }
+      }
+    },
+    "qwen-0.6b__extension__mean_subword": {
+      "model_slug": "qwen-0.6b",
+      "model_id": "Qwen/Qwen3-0.6B-Base",
+      "strategy": "extension",
+      "initialization": "mean_subword",
+      "metrics": {
+        "full_coverage_bpb": {
+          "values_by_seed": {
+            "17": 1.3219783229118967,
+            "42": 1.3256610956020338,
+            "73": 1.3257008598662434
+          },
+          "mean": 1.324446759460058,
+          "sample_standard_deviation": 0.0021378212140871215,
+          "n": 3
+        },
+        "chrf": {
+          "values_by_seed": {
+            "17": 16.67091454444084,
+            "42": 16.27559792689553,
+            "73": 16.244859599365824
+          },
+          "mean": 16.397124023567397,
+          "sample_standard_deviation": 0.2376071299118445,
+          "n": 3
+        },
+        "chrfpp": {
+          "values_by_seed": {
+            "17": 16.0034642877752,
+            "42": 15.580711230420723,
+            "73": 15.479593816555326
+          },
+          "mean": 15.68792311158375,
+          "sample_standard_deviation": 0.27790440487858215,
+          "n": 3
+        },
+        "train_runtime_seconds": {
+          "values_by_seed": {
+            "17": 2645.8419,
+            "42": 2897.9171,
+            "73": 3076.5363
+          },
+          "mean": 2873.4317666666666,
+          "sample_standard_deviation": 216.38869011381672,
+          "n": 3
+        },
+        "checkpoint_bytes": {
+          "values_by_seed": {
+            "17": 11850443778.0,
+            "42": 11850443713.0,
+            "73": 11850443705.0
+          },
+          "mean": 11850443732.0,
+          "sample_standard_deviation": 40.0374824383352,
+          "n": 3
+        }
+      }
+    },
+    "qwen-1.7b__replacement__random": {
+      "model_slug": "qwen-1.7b",
+      "model_id": "Qwen/Qwen3-1.7B-Base",
+      "strategy": "replacement",
+      "initialization": "random",
+      "metrics": {
+        "full_coverage_bpb": {
+          "values_by_seed": {
+            "17": 1.451053784149091,
+            "42": 1.4509517181256766,
+            "73": 1.452374288238077
+          },
+          "mean": 1.451459930170948,
+          "sample_standard_deviation": 0.0007935000784351568,
+          "n": 3
+        },
+        "chrf": {
+          "values_by_seed": {
+            "17": 14.015223624702195,
+            "42": 14.561370829403138,
+            "73": 14.061557751206061
+          },
+          "mean": 14.212717401770464,
+          "sample_standard_deviation": 0.30283018718372184,
+          "n": 3
+        },
+        "chrfpp": {
+          "values_by_seed": {
+            "17": 14.187587187081075,
+            "42": 14.525733999246773,
+            "73": 14.059062083080567
+          },
+          "mean": 14.257461089802804,
+          "sample_standard_deviation": 0.2410548506994496,
+          "n": 3
+        },
+        "train_runtime_seconds": {
+          "values_by_seed": {
+            "17": 3044.3726,
+            "42": 2921.7876,
+            "73": 2924.3744
+          },
+          "mean": 2963.511533333334,
+          "sample_standard_deviation": 70.03968132718292,
+          "n": 3
+        },
+        "checkpoint_bytes": {
+          "values_by_seed": {
+            "17": 4478111412.0,
+            "42": 4478111352.0,
+            "73": 4478111354.0
+          },
+          "mean": 4478111372.666667,
+          "sample_standard_deviation": 34.07834111768549,
+          "n": 3
+        }
+      }
+    },
+    "qwen-1.7b__replacement__mean_subword": {
+      "model_slug": "qwen-1.7b",
+      "model_id": "Qwen/Qwen3-1.7B-Base",
+      "strategy": "replacement",
+      "initialization": "mean_subword",
+      "metrics": {
+        "full_coverage_bpb": {
+          "values_by_seed": {
+            "17": 1.2172713216090385,
+            "42": 1.2197128766983827,
+            "73": 1.217522508151805
+          },
+          "mean": 1.2181689021530755,
+          "sample_standard_deviation": 0.0013430065961246576,
+          "n": 3
+        },
+        "chrf": {
+          "values_by_seed": {
+            "17": 19.121489389808556,
+            "42": 18.134486024431652,
+            "73": 18.466316393671107
+          },
+          "mean": 18.574097269303774,
+          "sample_standard_deviation": 0.5022513799686779,
+          "n": 3
+        },
+        "chrfpp": {
+          "values_by_seed": {
+            "17": 19.237060319981598,
+            "42": 18.34794253428414,
+            "73": 18.456282237194287
+          },
+          "mean": 18.68042836382001,
+          "sample_standard_deviation": 0.4850914591825681,
+          "n": 3
+        },
+        "train_runtime_seconds": {
+          "values_by_seed": {
+            "17": 2553.3732,
+            "42": 2585.9539,
+            "73": 2567.7429
+          },
+          "mean": 2569.023333333333,
+          "sample_standard_deviation": 16.32804750309518,
+          "n": 3
+        },
+        "checkpoint_bytes": {
+          "values_by_seed": {
+            "17": 4478111425.0,
+            "42": 4478111366.0,
+            "73": 4478111363.0
+          },
+          "mean": 4478111384.666667,
+          "sample_standard_deviation": 34.961884007206095,
+          "n": 3
+        }
+      }
+    }
+  },
+  "paired_comparisons": {
+    "qwen-0.6b-mean-subword-minus-random": {
+      "challenger": "qwen-0.6b__replacement__mean_subword",
+      "reference": "qwen-0.6b__replacement__random",
+      "delta_definition": "challenger_minus_reference",
+      "metrics": {
+        "full_coverage_bpb": {
+          "higher_is_better": false,
+          "deltas_by_seed": {
+            "17": -0.19979587464866544,
+            "42": -0.19742616011539948,
+            "73": -0.1990086058253122
+          },
+          "paired_confidence_interval": {
+            "method": "two_sided_paired_t_interval",
+            "confidence_level": 0.95,
+            "degrees_of_freedom": 2,
+            "mean_delta": -0.1987435468631257,
+            "sample_standard_deviation": 0.0012068881192428354,
+            "lower": -0.201741623154113,
+            "upper": -0.1957454705721384
+          }
+        },
+        "chrf": {
+          "higher_is_better": true,
+          "deltas_by_seed": {
+            "17": 2.8734963887169975,
+            "42": 1.6512243065900734,
+            "73": 3.1885038505985914
+          },
+          "paired_confidence_interval": {
+            "method": "two_sided_paired_t_interval",
+            "confidence_level": 0.95,
+            "degrees_of_freedom": 2,
+            "mean_delta": 2.5710748486352206,
+            "sample_standard_deviation": 0.8120352147757107,
+            "lower": 0.5538675482657363,
+            "upper": 4.588282149004705
+          }
+        },
+        "chrfpp": {
+          "higher_is_better": true,
+          "deltas_by_seed": {
+            "17": 2.9943428216220926,
+            "42": 1.9660159024197092,
+            "73": 3.1742702243482857
+          },
+          "paired_confidence_interval": {
+            "method": "two_sided_paired_t_interval",
+            "confidence_level": 0.95,
+            "degrees_of_freedom": 2,
+            "mean_delta": 2.7115429827966957,
+            "sample_standard_deviation": 0.6518829942900212,
+            "lower": 1.0921758529712282,
+            "upper": 4.330910112622163
+          }
+        },
+        "train_runtime_seconds": {
+          "higher_is_better": false,
+          "deltas_by_seed": {
+            "17": 207.01080000000002,
+            "42": 67.96900000000005,
+            "73": 27.191699999999855
+          },
+          "paired_confidence_interval": {
+            "method": "two_sided_paired_t_interval",
+            "confidence_level": 0.95,
+            "degrees_of_freedom": 2,
+            "mean_delta": 100.7238333333333,
+            "sample_standard_deviation": 94.27823986065577,
+            "lower": -133.4762977107726,
+            "upper": 334.92396437743923
+          }
+        },
+        "checkpoint_bytes": {
+          "higher_is_better": false,
+          "deltas_by_seed": {
+            "17": 10.0,
+            "42": 5.0,
+            "73": 9.0
+          },
+          "paired_confidence_interval": {
+            "method": "two_sided_paired_t_interval",
+            "confidence_level": 0.95,
+            "degrees_of_freedom": 2,
+            "mean_delta": 8.0,
+            "sample_standard_deviation": 2.6457513110645907,
+            "lower": 1.427589392024399,
+            "upper": 14.572410607975602
+          }
+        }
+      }
+    },
+    "qwen-1.7b-mean-subword-minus-random": {
+      "challenger": "qwen-1.7b__replacement__mean_subword",
+      "reference": "qwen-1.7b__replacement__random",
+      "delta_definition": "challenger_minus_reference",
+      "metrics": {
+        "full_coverage_bpb": {
+          "higher_is_better": false,
+          "deltas_by_seed": {
+            "17": -0.23378246254005242,
+            "42": -0.2312388414272939,
+            "73": -0.23485178008627194
+          },
+          "paired_confidence_interval": {
+            "method": "two_sided_paired_t_interval",
+            "confidence_level": 0.95,
+            "degrees_of_freedom": 2,
+            "mean_delta": -0.23329102801787274,
+            "sample_standard_deviation": 0.0018559262796719572,
+            "lower": -0.23790140447960773,
+            "upper": -0.22868065155613776
+          }
+        },
+        "chrf": {
+          "higher_is_better": true,
+          "deltas_by_seed": {
+            "17": 5.106265765106361,
+            "42": 3.573115195028514,
+            "73": 4.404758642465046
+          },
+          "paired_confidence_interval": {
+            "method": "two_sided_paired_t_interval",
+            "confidence_level": 0.95,
+            "degrees_of_freedom": 2,
+            "mean_delta": 4.361379867533307,
+            "sample_standard_deviation": 0.7674952483360667,
+            "lower": 2.4548159774807976,
+            "upper": 6.267943757585816
+          }
+        },
+        "chrfpp": {
+          "higher_is_better": true,
+          "deltas_by_seed": {
+            "17": 5.049473132900523,
+            "42": 3.822208535037367,
+            "73": 4.39722015411372
+          },
+          "paired_confidence_interval": {
+            "method": "two_sided_paired_t_interval",
+            "confidence_level": 0.95,
+            "degrees_of_freedom": 2,
+            "mean_delta": 4.4229672740172035,
+            "sample_standard_deviation": 0.6140372821983588,
+            "lower": 2.8976141048302155,
+            "upper": 5.948320443204191
+          }
+        },
+        "train_runtime_seconds": {
+          "higher_is_better": false,
+          "deltas_by_seed": {
+            "17": -490.99940000000015,
+            "42": -335.83370000000014,
+            "73": -356.63149999999996
+          },
+          "paired_confidence_interval": {
+            "method": "two_sided_paired_t_interval",
+            "confidence_level": 0.95,
+            "degrees_of_freedom": 2,
+            "mean_delta": -394.48820000000006,
+            "sample_standard_deviation": 84.22556568696946,
+            "lower": -603.7161040243741,
+            "upper": -185.26029597562606
+          }
+        },
+        "checkpoint_bytes": {
+          "higher_is_better": false,
+          "deltas_by_seed": {
+            "17": 13.0,
+            "42": 14.0,
+            "73": 9.0
+          },
+          "paired_confidence_interval": {
+            "method": "two_sided_paired_t_interval",
+            "confidence_level": 0.95,
+            "degrees_of_freedom": 2,
+            "mean_delta": 12.0,
+            "sample_standard_deviation": 2.6457513110645907,
+            "lower": 5.427589392024399,
+            "upper": 18.572410607975602
+          }
+        }
+      }
+    },
+    "qwen-0.6b-extension-minus-replacement": {
+      "challenger": "qwen-0.6b__extension__mean_subword",
+      "reference": "qwen-0.6b__replacement__mean_subword",
+      "delta_definition": "challenger_minus_reference",
+      "metrics": {
+        "full_coverage_bpb": {
+          "higher_is_better": false,
+          "deltas_by_seed": {
+            "17": 0.06781607393436051,
+            "42": 0.07031027101036291,
+            "73": 0.07099383126827674
+          },
+          "paired_confidence_interval": {
+            "method": "two_sided_paired_t_interval",
+            "confidence_level": 0.95,
+            "degrees_of_freedom": 2,
+            "mean_delta": 0.06970672540433338,
+            "sample_standard_deviation": 0.0016726433846557844,
+            "lower": 0.06555164889404397,
+            "upper": 0.0738618019146228
+          }
+        },
+        "chrf": {
+          "higher_is_better": true,
+          "deltas_by_seed": {
+            "17": -1.0944239101839557,
+            "42": -0.8605247538240768,
+            "73": -1.2264500581075772
+          },
+          "paired_confidence_interval": {
+            "method": "two_sided_paired_t_interval",
+            "confidence_level": 0.95,
+            "degrees_of_freedom": 2,
+            "mean_delta": -1.0604662407052032,
+            "sample_standard_deviation": 0.1853110211672912,
+            "lower": -1.5208043368071473,
+            "upper": -0.6001281446032591
+          }
+        },
+        "chrfpp": {
+          "higher_is_better": true,
+          "deltas_by_seed": {
+            "17": -1.8568770690435308,
+            "42": -1.704865917329256,
+            "73": -1.9910684439144397
+          },
+          "paired_confidence_interval": {
+            "method": "two_sided_paired_t_interval",
+            "confidence_level": 0.95,
+            "degrees_of_freedom": 2,
+            "mean_delta": -1.8509371434290756,
+            "sample_standard_deviation": 0.14319369257465445,
+            "lower": -2.2066499952519356,
+            "upper": -1.4952242916062157
+          }
+        },
+        "train_runtime_seconds": {
+          "higher_is_better": false,
+          "deltas_by_seed": {
+            "17": -89.0942,
+            "42": 244.50199999999995,
+            "73": 414.3104000000003
+          },
+          "paired_confidence_interval": {
+            "method": "two_sided_paired_t_interval",
+            "confidence_level": 0.95,
+            "degrees_of_freedom": 2,
+            "mean_delta": 189.90606666666676,
+            "sample_standard_deviation": 256.10463638461016,
+            "lower": -446.293118754375,
+            "upper": 826.1052520877085
+          }
+        },
+        "checkpoint_bytes": {
+          "higher_is_better": false,
+          "deltas_by_seed": {
+            "17": 9586926766.0,
+            "42": 9586926770.0,
+            "73": 9586926761.0
+          },
+          "paired_confidence_interval": {
+            "method": "two_sided_paired_t_interval",
+            "confidence_level": 0.95,
+            "degrees_of_freedom": 2,
+            "mean_delta": 9586926765.666666,
+            "sample_standard_deviation": 4.509249752822894,
+            "lower": 9586926754.465069,
+            "upper": 9586926776.868263
+          }
+        }
+      }
+    }
+  }
+}

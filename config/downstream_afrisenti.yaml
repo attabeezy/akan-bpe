@@ -1,0 +1,82 @@
+schema_version: 1
+experiment_id: revision-v2-p1-afrisenti
+purpose: >-
+  Evaluate frozen Akan-adapted Qwen checkpoints on human-annotated Twi sentiment
+  classification without task-specific fine-tuning.
+
+source_matrix:
+  path: config/revision_gpu_matrix.yaml
+  matrix_id: revision-v2-p0-gpu
+  sha256: 883c6c91347d22757616cd44e373ea8bb96abdc1182fb53f28305a184a117a5d
+
+dataset:
+  repository: masakhane/afrisenti
+  revision: eb42667d2e83d0081864767b47681fbaf00144fb
+  config: twi
+  license: CC-BY-4.0
+  fields: {text: tweet, label: label}
+  labels: [negative, neutral, positive]
+  splits:
+    train: {rows: 3481, sha256: e4f914076ef552c8edde24f8a5302e05c437fa70ac9d167dee567fd0e67962b9}
+    validation: {rows: 388, sha256: 8dc060ec5f5531a7c5e63c25290854b0051f0b34f80c2fdc6e66f88209c9df35}
+    test: {rows: 949, sha256: 990ed6dd8470df19b20edcfd7d6e0717353d06ac125fb555d35d88b41542329e}
+  clean_test_rows: 730
+  frozen_audit:
+    unique_normalized_texts: {train: 3105, validation: 385, test: 949}
+    overlaps: {train-validation: 74, train-test: 195, validation-test: 24}
+    overlap_label_conflicts: {train-validation: 14, train-test: 43, validation-test: 5}
+    within_split_label_conflicts: {train: 87, validation: 1, test: 0}
+  adaptation_overlap_files:
+    - data/pristine_twi_train.jsonl
+    - data/pristine_twi_validation.jsonl
+    - data/pristine_twi_test.jsonl
+    - data/aka_asr_train.jsonl
+    - data/aka_asr_validation.jsonl
+    - data/aka_asr_test.jsonl
+
+prompt:
+  selection_seed: 20260822
+  label_codes: {negative: "0", neutral: "1", positive: "2"}
+  demonstrations:
+    - {label: negative, row_index: 987, normalized_sha256: 7ad5ac51cd30f4e0f01f399e73cbf9f66b187373175b0cc578f8befb3d6f4beb}
+    - {label: neutral, row_index: 1576, normalized_sha256: 89ded6919d3e452f1c0848a18e3b031a54f14ec87babb532c05ebf4547b15246}
+    - {label: positive, row_index: 2276, normalized_sha256: 5104a82c986e65cab101d45376770f989eb5142457f6048b42dfe59b5543d8bb}
+  cyclic_orders:
+    - [negative, neutral, positive]
+    - [neutral, positive, negative]
+    - [positive, negative, neutral]
+  candidate_prefix: " "
+  max_prompt_tokens: 1024
+  greedy_max_new_tokens: 3
+
+evaluation:
+  primary_metric: macro_f1
+  bootstrap_resamples: 10000
+  bootstrap_seed: 20260822
+  batch_size: 8
+  surfaces: [official, clean]
+
+paths:
+  dataset_cache: data/downstream/afrisenti_twi
+  temporary_models: models/revision_v2/downstream_tmp
+  results_dir: results/revision_v2/downstream/afrisenti/runs
+  aggregate_result: results/revision_v2/downstream/afrisenti/aggregate.json
+  generated_table: results/revision_v2/downstream/afrisenti/table.md
+
+base_arms:
+  - {model_slug: qwen-0.6b, model_id: Qwen/Qwen3-0.6B-Base}
+  - {model_slug: qwen-1.7b, model_id: Qwen/Qwen3-1.7B-Base}
+
+adapted_arms:
+  - model_slug: qwen-0.6b
+    strategy: replacement
+    initialization: mean_subword
+  - model_slug: qwen-0.6b
+    strategy: extension
+    initialization: mean_subword
+  - model_slug: qwen-1.7b
+    strategy: replacement
+    initialization: mean_subword
+
+seeds: [17, 42, 73]
+expected_runs: 11

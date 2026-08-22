@@ -9,6 +9,7 @@ from akan_bpe.model_integration import (
     build_text_dataset,
     compute_token_count_comparison,
     load_experiment_tokenizer,
+    load_saved_qwen_artifacts,
     run_model_integration,
 )
 from akan_bpe.tokenizers import (
@@ -31,6 +32,7 @@ __all__ = [
     "compute_token_count_comparison",
     "compute_fertility",
     "load_experiment_tokenizer",
+    "load_saved_qwen_artifacts",
     "load_tokenizer",
     "run_fertility_experiment",
     "run_model_integration",

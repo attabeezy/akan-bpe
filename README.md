@@ -51,7 +51,25 @@ rather than evidence that the curve has fully plateaued. See
 
 The Qwen 0.6B extension contract is now frozen as well: 26,156 novel tokens from that 32K
 candidate vocabulary are appended without changing any original token ID. Its intrinsic v2
-comparison is complete; the controlled BPB/chrF/downstream model run remains pending.
+comparison and controlled BPB/chrF runs are complete; downstream task evaluation remains pending.
+
+### AfriSenti downstream evaluation
+
+The frozen P1 downstream protocol evaluates the Twi AfriSenti benchmark with two original
+Qwen bases and nine recreated adapted checkpoints (three strategies/model combinations by
+seeds 17, 42, and 73). It reports the official 949-row test split and a 730-row sensitivity
+surface that excludes normalized train/validation duplicates.
+
+```bash
+python scripts/run_downstream_afrisenti.py validate
+python scripts/run_downstream_afrisenti.py fetch-data
+python scripts/run_downstream_afrisenti.py status
+python scripts/run_downstream_afrisenti.py run --next
+python scripts/run_downstream_afrisenti.py aggregate
+```
+
+Model runs require a CUDA GPU. `notebooks/downstream_afrisenti.ipynb` runs resumable batches
+on a single Kaggle T4 and deletes each temporary checkpoint only after its result validates.
 
 Routing is now explicitly secondary analysis. The frozen audit reconstructs the historical
 TF-IDF/logistic-regression protocol and metrics, but the near-perfect result separates two source

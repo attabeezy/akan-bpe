@@ -329,12 +329,19 @@ The serialized scikit-learn 1.8.0 model also emits an inconsistent-version warni
 
 **Goal:** Demonstrate that lower fertility and BPB translate into useful model behavior.
 
-- [ ] Select at least one licensed Akan task with a defensible train/dev/test split. Prefer two
+**Execution readiness (August 22, 2026):** The downstream protocol is implemented and frozen in
+`config/downstream_afrisenti.yaml`. It pins the human-annotated Twi AfriSenti revision, audits the
+official split duplication, evaluates both the 949-row official test surface and a 730-row clean
+sensitivity surface, and expands to two unadapted bases plus nine adapted runs across seeds 17, 42,
+and 73. The CPU-safe contract/tests and resumable Kaggle notebook are complete; the 11 GPU result
+artifacts and aggregate table remain pending.
+
+- [x] Select at least one licensed Akan task with a defensible train/dev/test split. Prefer two
   complementary tasks if data quality and compute permit (for example sentiment plus topic
   classification or named-entity recognition).
-- [ ] Before selection, verify language variety, label quality, license, dataset size, leakage risk,
+- [x] Before selection, verify language variety, label quality, license, dataset size, leakage risk,
   and whether a causal LM can be evaluated fairly.
-- [ ] Freeze prompt/template, label mapping, decoding/parsing, and primary metric before running.
+- [x] Freeze prompt/template, label mapping, decoding/parsing, and primary metric before running.
 - [ ] Evaluate at least:
   - The best-BPB adapted model.
   - The weakest-BPB adapted model or the controlled 0.6B anchor.

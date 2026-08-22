@@ -1163,12 +1163,10 @@ def _run_smoke_validation(
     return eval_metrics, generation_samples, smoke, embedding_init
 
 
-def verify_saved_qwen_artifacts(
-    config: ModelIntegrationConfig,
-    runtime_model_id: str,
-    prompt: str,
-) -> dict[str, object]:
-    """Reload the saved tokenizer + adapter stack and verify inference works."""
+def load_saved_qwen_artifacts(
+    config: ModelIntegrationConfig, runtime_model_id: str
+) -> tuple[Any, PreTrainedTokenizerBase]:
+    """Reload a saved tokenizer and its QLoRA adapter for downstream inference."""
     stack = _import_training_stack()
     auto_model_for_causal_lm = stack["AutoModelForCausalLM"]
     bits_and_bytes_config = stack["BitsAndBytesConfig"]
@@ -1200,6 +1198,16 @@ def verify_saved_qwen_artifacts(
     _set_model_token_config(reloaded_model, tokenizer)
     reloaded_model.eval()
 
+    return reloaded_model, tokenizer
+
+
+def verify_saved_qwen_artifacts(
+    config: ModelIntegrationConfig,
+    runtime_model_id: str,
+    prompt: str,
+) -> dict[str, object]:
+    """Reload the saved tokenizer + adapter stack and verify inference works."""
+    reloaded_model, tokenizer = load_saved_qwen_artifacts(config, runtime_model_id)
     samples = _generate_samples(
         model=reloaded_model,
         tokenizer=tokenizer,
@@ -1209,7 +1217,7 @@ def verify_saved_qwen_artifacts(
     )
     return {
         "success": True,
-        "output_dir": str(output_dir),
+        "output_dir": config.output_dir,
         "runtime_model_id": runtime_model_id,
         "prompt": prompt,
         "completion": samples[0]["completion"] if samples else "",

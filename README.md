@@ -51,7 +51,7 @@ rather than evidence that the curve has fully plateaued. See
 
 The Qwen 0.6B extension contract is now frozen as well: 26,156 novel tokens from that 32K
 candidate vocabulary are appended without changing any original token ID. Its intrinsic v2
-comparison and controlled BPB/chrF runs are complete; downstream task evaluation remains pending.
+comparison, controlled BPB/chrF runs, and downstream task evaluation are complete.
 
 ### AfriSenti downstream evaluation
 
@@ -70,6 +70,11 @@ python scripts/run_downstream_afrisenti.py aggregate
 
 Model runs require a CUDA GPU. `notebooks/downstream_afrisenti.ipynb` runs resumable batches
 on a single Kaggle T4 and deletes each temporary checkpoint only after its result validates.
+All 11 frozen runs are complete. The per-run predictions, generated aggregate, and table are in
+`results/revision_v2/downstream/afrisenti/`. On official macro-F1, both adapted strategies trail
+their unadapted bases; the 0.6B extension exceeds replacement by only 0.0118 on average, with a
+paired 95% interval that crosses zero. The result therefore does not support a downstream benefit
+for tokenizer adaptation under this frozen few-shot sentiment protocol.
 
 Routing is now explicitly secondary analysis. The frozen audit reconstructs the historical
 TF-IDF/logistic-regression protocol and metrics, but the near-perfect result separates two source

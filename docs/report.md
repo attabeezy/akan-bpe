@@ -261,6 +261,34 @@ model rows, or 53.08M parameters (101.25 MiB FP16). The complete extension lexic
 full-coverage BPB, chrF/chrF++, downstream performance, throughput, and checkpoint size before the
 adaptation strategy is selected.
 
+### 4.7 Experiment 7: Frozen Few-Shot AfriSenti Evaluation
+
+The downstream evaluation uses the pinned, human-annotated Twi AfriSenti split and a frozen
+three-demonstration candidate-likelihood protocol. It reports the official 949-example test set and
+a 730-example clean sensitivity surface after removing normalized train/validation duplicates.
+Two unadapted Qwen bases and nine exactly recreated adapted checkpoints were evaluated; adapted
+arms use seeds 17, 42, and 73.
+
+| Arm | Seed | Official macro-F1 | Official accuracy | Clean macro-F1 | Clean accuracy |
+|---|---:|---:|---:|---:|---:|
+| Qwen 0.6B original | base | **0.2587** | 0.2856 | **0.2406** | 0.2671 |
+| Qwen 1.7B original | base | 0.2205 | **0.3899** | 0.2079 | **0.3671** |
+| Qwen 0.6B replacement | mean (3) | 0.0889 | 0.1538 | 0.0941 | 0.1644 |
+| Qwen 0.6B extension | mean (3) | 0.1007 | 0.1605 | 0.1059 | 0.1708 |
+| Qwen 1.7B replacement | mean (3) | 0.0899 | 0.1545 | 0.0941 | 0.1644 |
+
+All invalid-output rates are zero. At 0.6B, extension-minus-replacement is +0.0118 official
+macro-F1, with a paired 95% t interval of [-0.0271, 0.0506]; the clean-surface estimate is +0.0118
+[-0.0287, 0.0522]. Both adapted strategies substantially trail the corresponding unadapted base,
+and the clean sensitivity analysis preserves the conclusion. Per-seed results, stratified
+bootstrap intervals, per-class metrics, confusion matrices, and row-keyed error records are stored
+in `results/revision_v2/downstream/afrisenti/`.
+
+This one frozen few-shot sentiment task does not show that lower fertility or improved intrinsic
+BPB/chrF translates into better downstream classification. It is a scoped negative result, not a
+claim that tokenizer adaptation cannot help other Akan tasks, training budgets, or evaluation
+formats, and not an assessment of broad Akan understanding.
+
 ---
 
 ## 5. Discussion

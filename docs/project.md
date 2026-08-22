@@ -1,10 +1,11 @@
 # Akan-BPE — Project Reference
 **Eliminating the Tokenization Tax for Akan via BPE Tokenizer Experiments**
 
-**Status:** ICAST reviewer-revision preparation. The frozen 15-run revision-v2 GPU matrix is
-complete and validated in `results/revision_v2/gpu_runs`, with generated statistics in
-`results/revision_v2/gpu_matrix_aggregate.json`. The remaining critical experiment is the P1
-downstream Akan task; qualitative analysis, manuscript revision, and final QA also remain.
+**Status:** ICAST reviewer-revision preparation. The frozen 15-run revision-v2 GPU matrix and the
+11-run AfriSenti downstream matrix are complete and validated, with generated statistics in
+`results/revision_v2/gpu_matrix_aggregate.json` and
+`results/revision_v2/downstream/afrisenti/aggregate.json`. Qualitative analysis, manuscript
+revision, and final QA remain.
 **Scope:** Akan (Twi), tokenizer experiments with ML routing
 **Paper target:** IEEE Ghana ICAST 2026. The active plan is now driven by
 this ICAST submission — see §0 (Research Design & Road to Paper) for the locked decisions and the
@@ -31,7 +32,7 @@ The revision is ready only when:
 - [x] All four reviewer-required additions are complete: vocabulary-size ablation, vocabulary
   extension baseline, multi-seed runs, and router documentation/demotion.
 - [ ] BPB, chrF/chrF++, tokenizer training, QLoRA, and decoding protocols are fully specified.
-- [ ] At least one useful downstream Akan task has been evaluated on at least two adapted models.
+- [x] At least one useful downstream Akan task has been evaluated on at least two adapted models.
 - [ ] Every reported number can be regenerated from a committed script/notebook and traced to a
   structured result artifact.
 - [ ] Tables and figures are regenerated from the final artifacts rather than copied manually.
@@ -150,7 +151,8 @@ IDs remain stable after save/reload. The extension reduces fertility by 23.1% on
 formal Twi versus the original Qwen tokenizer, while full replacement reduces it by 49.6% and
 52.0%. Under the controlled model-quality protocol, extension is worse than full replacement on
 BPB and chrF/chrF++ while requiring a much larger lexical checkpoint. The downstream-task portion
-of the comparison remains the separate P1 gate in R9.
+is now complete in R9 and shows that neither adapted strategy improves frozen few-shot AfriSenti
+classification over the unadapted base.
 
 **Execution readiness (August 2, 2026):** The remaining controlled runs are frozen in the single
 `config/revision_gpu_matrix.yaml` contract. The matrix runner expands stable IDs, executes exactly
@@ -250,7 +252,7 @@ Invoke `run --next` once per fresh GPU process until `status` reports all 15 run
 run records the seed, corrected BPB, chrF/chrF++, Trainer throughput, processed non-padding tokens,
 checkpoint bytes, and reload verification. Aggregation reports every seed, arm means/sample
 standard deviations, and 95% paired t intervals for mean-subword-minus-random at both sizes and
-extension-minus-replacement at 0.6B. The downstream task remains the separate P1 gate in R9.
+extension-minus-replacement at 0.6B. The separate P1 downstream gate in R9 is now complete.
 
 ### R7. P0 - Router: document it or demote it
 
@@ -329,12 +331,20 @@ The serialized scikit-learn 1.8.0 model also emits an inconsistent-version warni
 
 **Goal:** Demonstrate that lower fertility and BPB translate into useful model behavior.
 
-**Execution readiness (August 22, 2026):** The downstream protocol is implemented and frozen in
-`config/downstream_afrisenti.yaml`. It pins the human-annotated Twi AfriSenti revision, audits the
-official split duplication, evaluates both the 949-row official test surface and a 730-row clean
-sensitivity surface, and expands to two unadapted bases plus nine adapted runs across seeds 17, 42,
-and 73. The CPU-safe contract/tests and resumable Kaggle notebook are complete; the 11 GPU result
-artifacts and aggregate table remain pending.
+**Execution status (August 22, 2026):** All 11 runs are complete and validate against manifest
+SHA-256 `6545f540097412d96935514a1c101c4a501bdb0292c925cad78e58c46fec4533`.
+The frozen protocol pins the human-annotated Twi AfriSenti revision, audits official-split
+duplication, and evaluates both the 949-row official test surface and a 730-row clean sensitivity
+surface. Per-run predictions and metrics are in `results/revision_v2/downstream/afrisenti/runs`;
+the generated aggregate and table are `aggregate.json` and `table.md` in the parent directory.
+
+The unadapted Qwen 0.6B base has the best official macro-F1 (0.2587), while its replacement and
+extension arms average 0.0889 and 0.1007 across seeds. At 1.7B, the unadapted base scores 0.2205
+versus 0.0899 for replacement. Extension-minus-replacement at 0.6B is +0.0118 macro-F1, but its
+paired 95% interval is [-0.0271, 0.0506]. The clean surface gives the same conclusion. All invalid
+output rates are zero. Thus lower fertility and better intrinsic model metrics did not translate
+to better frozen few-shot sentiment classification under this one-task protocol; this is evidence
+against a downstream benefit here, not evidence about broad Akan capability.
 
 - [x] Select at least one licensed Akan task with a defensible train/dev/test split. Prefer two
   complementary tasks if data quality and compute permit (for example sentiment plus topic
@@ -342,18 +352,17 @@ artifacts and aggregate table remain pending.
 - [x] Before selection, verify language variety, label quality, license, dataset size, leakage risk,
   and whether a causal LM can be evaluated fairly.
 - [x] Freeze prompt/template, label mapping, decoding/parsing, and primary metric before running.
-- [ ] Evaluate at least:
+- [x] Evaluate at least:
   - The best-BPB adapted model.
   - The weakest-BPB adapted model or the controlled 0.6B anchor.
   - The corresponding unadapted base model where feasible.
   - Vocabulary extension and full replacement on the anchor model.
-- [ ] Report task-appropriate metrics (for example macro-F1 plus accuracy), per-class results,
+- [x] Report task-appropriate metrics (for example macro-F1 plus accuracy), per-class results,
   invalid-output rate, confidence intervals, and error examples.
-- [ ] Keep the conclusion narrow if the task set is small: evidence of functional utility, not
+- [x] Keep the conclusion narrow if the task set is small: evidence of functional utility, not
   broad Akan understanding.
-- [ ] If no trustworthy labeled dataset is available, document the search and use a small,
-  independently reviewed evaluation set with a clear annotation protocol; do not silently substitute
-  an unvalidated synthetic benchmark.
+- [x] The fallback was not needed: a pinned, human-annotated AfriSenti Twi benchmark was available,
+  so no synthetic benchmark was substituted.
 
 ### R10. P1 - Qualitative tokenizer analysis
 
@@ -416,7 +425,7 @@ artifacts and aggregate table remain pending.
 - [ ] Add the vocabulary-size curve and trade-off table.
 - [ ] Add extension-vs-replacement results.
 - [ ] Replace single-run initialization claims with multi-seed aggregates and uncertainty.
-- [ ] Add the downstream task table.
+- [x] Add the downstream task table.
 - [ ] Add qualitative tokenization examples.
 - [ ] Define every abbreviation and sign convention in table captions, including `Red.` and
   `BPB gain = base BPB - adapted BPB`, where positive means improvement.
